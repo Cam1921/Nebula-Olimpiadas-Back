@@ -1,4 +1,4 @@
-Nebula-Olimpiadas — Backend
+OH SANSI! OLIMPIADAS - BACKEND
 
 Repositorio para el desarrollo Back-end del sistema para Olimpiadas. Proyecto grupal para Taller de Ingeniería de Software.
 
