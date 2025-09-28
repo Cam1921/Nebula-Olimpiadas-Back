@@ -1,66 +1,209 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+Nebula-Olimpiadas — Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Repositorio para el desarrollo Back-end del sistema para Olimpiadas. Proyecto grupal para Taller de Ingeniería de Software.
 
-## About Laravel
+🧰 Tecnologías
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Framework: Laravel 11
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Lenguaje: PHP 8.2/8.3
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Auth: Laravel Sanctum (Bearer tokens)
 
-## Learning Laravel
+Base de datos: PostgreSQL (Supabase)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Gestor de dependencias: Composer
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+✅ Requisitos previos
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+PHP 8.2 o 8.3 (Non Thread Safe, x64 recomendado en Windows)
 
-## Laravel Sponsors
+Composer
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Git
 
-### Premium Partners
+PostgreSQL en Supabase (un proyecto DEV compartido para el equipo)
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+Extensiones PHP requeridas (php.ini)
+extension=curl
+extension=mbstring
+extension=openssl
+extension=pgsql
+extension=pdo_pgsql
+extension=fileinfo
 
-## Contributing
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Si aparece el warning Module "openssl" is already loaded, significa que la extensión está duplicada. Deja solo una línea extension=openssl.
 
-## Code of Conduct
+🗂 Estructura del proyecto (resumen)
+app/
+  Http/Controllers/AuthController.php
+  Models/User.php
+config/
+  cors.php
+  sanctum.php
+database/
+  migrations/
+  seeders/
+    AdminUserSeeder.php
+    DatabaseSeeder.php
+routes/
+  api.php
+.env           (local, no se versiona)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+🚀 Instalación (desarrollo local)
+1) Clonar el repositorio
+git clone https://github.com/<tu-usuario>/Nebula-Olimpiadas-Back.git
+cd Nebula-Olimpiadas-Back
 
-## Security Vulnerabilities
+2) Instalar dependencias
+composer install
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+3) Configurar variables de entorno
 
-## License
+Copia el ejemplo y edita tus credenciales:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+cp .env.example .env
+php artisan key:generate
+
+
+Edita .env con Supabase DEV (ejemplo):
+
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=pgsql
+DB_HOST=db.xxxxxx.supabase.co
+DB_PORT=5432
+DB_DATABASE=postgres
+DB_USERNAME=postgres
+DB_PASSWORD=<<PASSWORD_DEV>>
+DB_SSLMODE=require
+
+CACHE_STORE=file
+SESSION_DRIVER=file
+
+
+⚠️ Si existe DATABASE_URL en .env, coméntalo para que no sobreescriba las variables DB_*.
+
+4) Limpiar config y migrar
+php artisan config:clear
+php artisan migrate
+
+5) Semillas (usuario admin)
+php artisan db:seed --class="Database\\Seeders\\AdminUserSeeder"
+# Admin: admin@nebula.com  /  Admin12345!
+
+6) Levantar el servidor
+php artisan serve --host=0.0.0.0 --port=8000
+# http://localhost:8000
+
+🔐 Autenticación (Sanctum, Bearer)
+
+Rutas principales (API):
+
+POST /api/login → devuelve { token, user }
+
+POST /api/logout → requiere header Authorization: Bearer <TOKEN>
+
+GET /api/me → pendiente menor (ver abajo)
+
+GET /api/health → ping { ok: true }
+
+Pruebas rápidas
+
+Login
+
+POST http://localhost:8000/api/login
+Headers:
+  Content-Type: application/json
+Body (JSON):
+{
+  "email": "admin@nebula.com",
+  "password": "Admin12345!"
+}
+
+
+🌐 CORS (SPA en Vite)
+
+config/cors.php debe permitir el front local:
+
+return [
+  'paths' => ['api/*', 'login', 'logout', 'sanctum/csrf-cookie'],
+  'allowed_methods' => ['*'],
+  'allowed_origins' => ['http://localhost:5173','http://127.0.0.1:5173'],
+  'allowed_headers' => ['*'],
+  'supports_credentials' => false, // Bearer tokens (no cookies)
+];
+
+
+Luego:
+
+php artisan config:clear
+
+🧪 Comandos útiles
+php artisan --version
+php artisan route:list
+php artisan migrate
+php artisan migrate:fresh --seed     # ⚠️ NO usar en BD compartida sin avisar
+php artisan tinker
+php artisan optimize:clear
+composer dump-autoload
+
+🧩 Problemas comunes (FAQ)
+
+1) “could not translate host name”
+El DB_HOST no debe incluir @. Debe ser db.xxxxxx.supabase.co.
+Agrega DB_SSLMODE=require.
+
+2) Cambié .env y no aplica
+php artisan config:clear
+
+3) 401 en login
+Cuerpo JSON vacío o credenciales incorrectas. Asegúrate de enviar:
+
+{ "email":"admin@nebula.com","password":"Admin12345!" }
+
+4) personal_access_tokens duplicada
+Quitá la migración duplicada más nueva y vuelve a migrar.
+
+👥 Trabajo en equipo (BD compartida)
+
+Este proyecto usa una sola base Supabase DEV compartida para todo el equipo.
+
+Reglas:
+
+Toda modificación de esquema va en migraciones nuevas (no edites migraciones ya aplicadas).
+
+Seeders idempotentes (updateOrCreate), nada destructivo.
+
+Prohibido migrate:fresh o db:wipe en horario de trabajo sin aviso a todo el equipo.
+
+Un responsable revisa PRs con migraciones antes de mergear a develop.
+
+Flujo:
+
+Crea rama de feature desde develop.
+
+Implementa cambios + migraciones.
+
+PR → revisión → merge a develop.
+
+Post-merge: git pull && php artisan migrate.
+
+.env.example del repo apunta a Supabase DEV; el DB_PASSWORD se comparte por canal seguro (no en el repo).
+
+Para producción se recomienda otro proyecto Supabase separado.
+
+🏷️ Ramas
+
+develop (rama por defecto durante el curso)
+
+feature/* → PR a develop
+
+Protege develop en GitHub (revisiones, no push directo).
+
+📄 Licencia / Autoría
+
+Equipo Nebula Soft S.R.L. — Proyecto académico.
+
+Licencia: (definir: MIT / privativa / etc.)
