@@ -4,18 +4,15 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::create('tutor_competidor', function (Blueprint $table) {
+        Schema::create('lista_inscripcion', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('nombre_completo');
-            $table->string('telefono');
-            $table->string('email');
+            $table->bigInteger('id_olimpiada');
             $table->timestamps();
         });
     }
@@ -25,6 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('tutor_competidor');
+        Schema::dropIfExists('lista_inscripcion');
     }
 };

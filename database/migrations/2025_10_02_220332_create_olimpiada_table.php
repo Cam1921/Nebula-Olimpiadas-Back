@@ -10,9 +10,12 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('nivel', function (Blueprint $table) {
+        Schema::create('olimpiada', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('nombre_nivel');
+            $table->string('nombre_olimpiada');
+            $table->integer('gestion');
+            $table->date('fecha_inicio');
+            $table->date('fecha_fin');
             $table->timestamps();
         });
     }
@@ -22,6 +25,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('nivel');
+        Schema::dropIfExists('olimpiada');
     }
 };

@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -15,7 +14,8 @@ return new class extends Migration
             $table->bigIncrements('id');
             $table->bigInteger('id_competidor');
             $table->bigInteger('id_area_nivel');
-            $table->string('gestion');
+            $table->bigInteger('id_lista_inscripcion');
+            $table->bigInteger('id_tutor_academico')->nullable();
             $table->timestamps();
         });
     }

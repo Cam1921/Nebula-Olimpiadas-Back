@@ -10,10 +10,9 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('nivel', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->string('nombre_nivel');
-            $table->timestamps();
+        Schema::table('lista_inscripcion', function (Blueprint $table) {
+            $table->foreign(['id_olimpiada'])->references(['id'])->on('olimpiada')->onUpdate('no action')->onDelete('cascade');
+
         });
     }
 
@@ -22,6 +21,8 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('nivel');
+        Schema::table('lista_inscripcion', function (Blueprint $table) {
+            $table->dropForeign('lista_inscripcion_id_olimpiada_foreign');
+        });
     }
 };

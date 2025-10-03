@@ -16,14 +16,15 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property string $nombre_completo
  * @property string $ci
- * @property string $grado
+ * @property int $id_grado
  * @property int $id_institucion
- * @property int $id_tutor
+ * @property int $id_tutor_legal
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * 
+ * @property Grado $grado
  * @property Institucion $institucion
- * @property TutorCompetidor $tutor_competidor
+ * @property Tutor $tutor
  * @property Collection|Inscripcion[] $inscripcions
  *
  * @package App\Models
@@ -33,26 +34,33 @@ class Competidor extends Model
 	protected $table = 'competidor';
 
 	protected $casts = [
+		'id_grado' => 'int',
 		'id_institucion' => 'int',
-		'id_tutor' => 'int'
+		'id_tutor_legal' => 'int'
 	];
 
 	protected $fillable = [
-		'nombre_completo',
+		'nombres',
+		'apellidos',
 		'ci',
-		'grado',
+		'id_grado',
 		'id_institucion',
-		'id_tutor'
+		'id_tutor_legal'
 	];
+
+	public function grado()
+	{
+		return $this->belongsTo(Grado::class, 'id_grado');
+	}
 
 	public function institucion()
 	{
 		return $this->belongsTo(Institucion::class, 'id_institucion');
 	}
 
-	public function tutor_competidor()
+	public function tutor()
 	{
-		return $this->belongsTo(TutorCompetidor::class, 'id_tutor');
+		return $this->belongsTo(Tutor::class, 'id_tutor_legal');
 	}
 
 	public function inscripcions()

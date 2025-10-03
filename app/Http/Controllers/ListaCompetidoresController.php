@@ -19,25 +19,26 @@ class ListaCompetidoresController extends Controller
         $file = $request->file('archivo');
         $resultado = $this->competidoresService->importarCsv($file);
 
-
-        if ($resultado['success']) {
-            $data = [
-                'importados' => $resultado['importados'],
-                'areas' => $resultado['areas'],
-                'niveles' => $resultado['niveles']
-            ];
-
+        // Manejo de error
+        if ($resultado['status'] === 'error') {
             return response()->json([
-                'message' => 'Competidores importados con éxito',
-                'data' => $data
-            ], 201);
+                'status' => 'error',
+                'message' => $resultado['message'] ?? 'Error desconocido',
+                'importados' => $resultado['importados'] ?? [],
+                'errores' => $resultado['errores'] ?? []
+            ], 400);
         }
 
+        // Éxito total o parcial
         return response()->json([
-            'error' => 'Error al importar competidores',
-            'detalle' => $resultado['error']
-        ], 500);
+            'status' => 'ok',
+            'import_id' => (string) \Illuminate\Support\Str::uuid(),
+            'insertados' => $resultado['insertados'],
+            'importados' => $resultado['importados'] ?? [],
+            'errores' => $resultado['errores'] ?? []
+        ], empty($resultado['errores'] ?? []) ? 201 : 207); // 207 = Multi-Status
     }
+
     /* public function index(Request $request)
     {
         // filtros opcionales

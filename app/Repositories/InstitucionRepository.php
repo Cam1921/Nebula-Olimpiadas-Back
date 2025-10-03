@@ -6,11 +6,14 @@ use App\Models\Institucion;
 
 class InstitucionRepository
 {
-    public function firstOrCreateInstitucion($nombre, $departamento, $municipio = '')
+    public function firstOrCreateInstitucion(array $data)
     {
         return Institucion::firstOrCreate(
-            ['nombre_institucion' => $nombre, 'departamento_institucion' => $departamento],
-            ['municipio_institucion' => $municipio]
+            [
+                'nombre_institucion' => $data['nombre_institucion'],
+                'departamento_institucion' => $data['departamento_institucion']
+            ],
+            $data
         );
     }
 }

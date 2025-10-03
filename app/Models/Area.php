@@ -15,7 +15,6 @@ use Illuminate\Database\Eloquent\Model;
  * 
  * @property int $id
  * @property string $nombre_area
- * @property string $descripcion_area
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * 
@@ -28,14 +27,13 @@ class Area extends Model
 	protected $table = 'area';
 
 	protected $fillable = [
-		'nombre_area',
-		'descripcion_area'
+		'nombre_area'
 	];
 
 	public function nivels()
 	{
 		return $this->belongsToMany(Nivel::class, 'area_nivel', 'id_area', 'id_nivel')
-					->withPivot('id')
+					->withPivot('id', 'id_olimpiada')
 					->withTimestamps();
 	}
 }

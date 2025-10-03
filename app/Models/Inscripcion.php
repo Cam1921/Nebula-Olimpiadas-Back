@@ -15,12 +15,16 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property int $id_competidor
  * @property int $id_area_nivel
+ * @property int $id_lista_inscripcion
+ * @property int $id_tutor_academico
  * @property string $gestion
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * 
  * @property Competidor $competidor
  * @property AreaNivel $area_nivel
+ * @property ListaInscripcion $lista_inscripcion
+ * @property Tutor $tutor
  *
  * @package App\Models
  */
@@ -30,13 +34,17 @@ class Inscripcion extends Model
 
 	protected $casts = [
 		'id_competidor' => 'int',
-		'id_area_nivel' => 'int'
+		'id_area_nivel' => 'int',
+		'id_lista_inscripcion' => 'int',
+		'id_tutor_academico' => 'int'
 	];
 
 	protected $fillable = [
 		'id_competidor',
 		'id_area_nivel',
-		'gestion'
+		'id_lista_inscripcion',
+		'id_tutor_academico'
+
 	];
 
 	public function competidor()
@@ -47,5 +55,15 @@ class Inscripcion extends Model
 	public function area_nivel()
 	{
 		return $this->belongsTo(AreaNivel::class, 'id_area_nivel');
+	}
+
+	public function lista_inscripcion()
+	{
+		return $this->belongsTo(ListaInscripcion::class, 'id_lista_inscripcion');
+	}
+
+	public function tutor()
+	{
+		return $this->belongsTo(Tutor::class, 'id_tutor_academico');
 	}
 }

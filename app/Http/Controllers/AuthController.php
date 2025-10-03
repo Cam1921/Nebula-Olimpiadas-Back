@@ -28,7 +28,7 @@ class AuthController extends Controller
         return response()->json([
             'user' => $user,
             'token' => $token,
-        ]);
+        ], 201);
     }
 
     // Login
@@ -53,5 +53,9 @@ class AuthController extends Controller
         $request->user()->tokens()->delete();
 
         return response()->json(['message' => 'Sesión cerrada']);
+    }
+    public function me(Request $request)
+    {
+        return response()->json($request->user());
     }
 }

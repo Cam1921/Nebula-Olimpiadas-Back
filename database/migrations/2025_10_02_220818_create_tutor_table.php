@@ -10,9 +10,13 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('nivel', function (Blueprint $table) {
+        Schema::create('tutor', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('nombre_nivel');
+            $table->string('ci');
+            $table->string('nombres');
+            $table->string('apellidos');
+            $table->string('telefono');
+            $table->string('email');
             $table->timestamps();
         });
     }
@@ -22,6 +26,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('nivel');
+        Schema::dropIfExists('tutor');
     }
 };
