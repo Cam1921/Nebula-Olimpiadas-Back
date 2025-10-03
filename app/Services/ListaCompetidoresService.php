@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Repositories\TutorRepository;
+use App\Traits\NormalizeStringTrait;
 use Illuminate\Support\Facades\DB;
 use App\Repositories\PersonaRepository;
 use App\Repositories\InstitucionRepository;
@@ -28,6 +29,8 @@ class ListaCompetidoresService
     protected $listaInscripcionRepo;
     protected $olimpiadaRepo;
 
+    use NormalizeStringTrait;
+
     public function __construct(
         TutorRepository $tutorRepo,
         InstitucionRepository $institucionRepo,
@@ -51,25 +54,7 @@ class ListaCompetidoresService
         $this->listaInscripcionRepo = $listaInscripcionRepo;
         $this->olimpiadaRepo = $olimpiadaRepo;
     }
-    private function normalizeHeader($header)
-    {
-        // quitar espacios de izquierda y derecha
-        $header = trim($header);
 
-        // convertir a minúsculas
-        $header = mb_strtolower($header);
-
-        // quitar acentos y tildes
-        $header = \Illuminate\Support\Str::ascii($header);
-
-        // reemplazar múltiples espacios internos, guiones o tabs por un solo espacio
-        $header = preg_replace('/[\s\-]+/', ' ', $header);
-
-        // volver a recortar espacios finales
-        $header = trim($header);
-
-        return $header;
-    }
     public function importarCsv($file)
     {
         if (!$file) {
@@ -80,7 +65,7 @@ class ListaCompetidoresService
         $headers = fgetcsv($handle, 1000, ',');
 
         // Normalizar encabezados del CSV
-        $headers = array_map(fn($h) => $this->normalizeHeader($h), $headers);
+        $headers = array_map(fn($h) => $this->normalizeString($h), $headers);
 
         // --- Encabezados obligatorios ---
         $required = [
@@ -93,7 +78,7 @@ class ListaCompetidoresService
             'area',
             'nivel'
         ];
-        $required_normalized = array_map(fn($h) => $this->normalizeHeader($h), $required);
+        $required_normalized = array_map(fn($h) => $this->normalizeString($h), $required);
 
         $missing_required = array_diff($required_normalized, $headers);
         if (!empty($missing_required)) {
@@ -106,7 +91,7 @@ class ListaCompetidoresService
 
         // --- Encabezados opcionales ---
         $optional = ['contacto tutor academico'];
-        $optional_normalized = array_map(fn($h) => $this->normalizeHeader($h), $optional);
+        $optional_normalized = array_map(fn($h) => $this->normalizeString($h), $optional);
 
         $missing_optional = array_diff($optional_normalized, $headers);
         $advertencias_encabezado = [];
@@ -163,6 +148,73 @@ class ListaCompetidoresService
                         ];
                     }
 
+                    // --- Grado ---
+                    $gradoObj = $this->gradoRepo->findByNombre($fila['grado']);
+                    if (!$gradoObj) {
+                        $errores[] = [
+                            'fila' => $filaIndex,
+                            'error' => "El grado '{$fila['grado']}' no existe en el sistema"
+                        ];
+                    }
+
+                    // --- Área ---
+                    $areaObj = $this->areaRepo->findByNombre($fila['area']);
+                    if (!$areaObj) {
+                        $errores[] = [
+                            'fila' => $filaIndex,
+                            'error' => "El área '{$fila['area']}' no existe en el sistema"
+                        ];
+                    }
+
+                    // --- Nivel ---
+                    $nivelObj = $this->nivelRepo->findByNombre($fila['nivel']);
+                    if (!$nivelObj) {
+                        $errores[] = [
+                            'fila' => $filaIndex,
+                            'error' => "El nivel '{$fila['nivel']}' no existe en el sistema"
+                        ];
+                    }
+
+                    // --- Validar coherencia grado-nivel ---
+                    if ($gradoObj && $nivelObj) {
+                        $nivelGradoExistente = $this->gradoRepo->isGradoEnNivel($gradoObj->id, $nivelObj->id);
+                        if (!$nivelGradoExistente) {
+                            $errores[] = [
+                                'fila' => $filaIndex,
+                                'error' => "Incoherencia: el grado '{$gradoObj->nombre_grado}' no corresponde al nivel '{$nivelObj->nombre_nivel}'"
+                            ];
+                            continue;
+                        }
+                    }
+                    // --- Relación área-nivel ---
+                    $areaNivel = null;
+                    if ($areaObj && $nivelObj) { // solo si existen área y nivel
+                        $areaNivel = $this->areaNivelRepo->findAreaNivel($areaObj->id, $nivelObj->id, $olimpiada->id);
+                        if (!$areaNivel) {
+                            $errores[] = [
+                                'fila' => $filaIndex,
+                                'error' => "No existe relación configurada entre área '{$areaObj->nombre_area}' y nivel '{$nivelObj->nombre_nivel}' en la olimpiada"
+                            ];
+                        }
+                    }
+
+                    // --- Validar duplicado ---
+                    $yaExiste = false;
+                    if ($areaObj && $nivelObj) {
+                        $yaExiste = $this->inscripcionRepo->existeInscripcion($fila['ci'], $areaObj->id, $nivelObj->id, $olimpiada->id);
+                        if ($yaExiste) {
+                            $errores[] = [
+                                'fila' => $filaIndex,
+                                'error' => "El competidor con CI '{$fila['ci']}' ya está inscrito en el área '{$areaObj->nombre_area}' y nivel '{$nivelObj->nombre_nivel}'"
+                            ];
+                        }
+                    }
+
+                    // --- Decidir si registrar ---
+                    if (!$gradoObj || !$areaObj || !$nivelObj || !$areaNivel || $yaExiste || !empty($campos_vacios)) {
+                        // No se registra esta fila, ya que hubo errores
+                        continue; // aquí solo saltamos al final de la iteración, después de registrar todos los errores
+                    }
 
 
                     // --- Tutor Legal ---
@@ -193,8 +245,7 @@ class ListaCompetidoresService
                         'municipio_institucion' => ''
                     ]);
 
-                    // --- Grado ---
-                    $gradoObj = $this->gradoRepo->firstOrCreateGrado($fila['grado']);
+
 
                     // --- Competidor ---
                     $nombreSeparadoCompetidor = separarNombreCompleto($fila['nombre completo']);
@@ -207,10 +258,7 @@ class ListaCompetidoresService
                         'id_tutor_legal' => $tutorLegal->id,
                     ]);
 
-                    // --- Área y Nivel ---
-                    $areaObj = $this->areaRepo->firstOrCreateArea($fila['area']);
-                    $nivelObj = $this->nivelRepo->firstOrCreateNivel($fila['nivel']);
-                    $areaNivel = $this->areaNivelRepo->firstOrCreateAreaNivel($areaObj->id, $nivelObj->id, $olimpiada->id);
+
 
                     // --- Inscripción ---
                     $this->inscripcionRepo->createInscripcion([

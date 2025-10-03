@@ -3,16 +3,18 @@
 namespace App\Repositories;
 
 use App\Models\Area;
+use App\Traits\NormalizeStringTrait;
 
 class AreaRepository
 {
-    public function firstOrCreateArea($nombre)
+    use NormalizeStringTrait;
+
+    public function findByNombre(string $nombre): ?Area
     {
-        return Area::firstOrCreate(['nombre_area' => $nombre], ['descripcion_area' => 'Sin descripción']);
-    }
-    public function getAllAreas()
-    {
-        $areas = Area::select('id', 'nombre_area')->get();
-        return $areas;
+        $nombreNormalizado = $this->normalizeString($nombre);
+
+        return Area::all()->first(function ($a) use ($nombreNormalizado) {
+            return $this->normalizeString($a->nombre_area) === $nombreNormalizado;
+        });
     }
 }

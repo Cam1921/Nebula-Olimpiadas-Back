@@ -3,12 +3,19 @@
 namespace App\Repositories;
 
 use App\Models\Nivel;
+use App\Traits\NormalizeStringTrait;
 
 class NivelRepository
 {
-    public function firstOrCreateNivel($nombre)
+    use NormalizeStringTrait;
+
+    public function findByNombre(string $nombre): ?Nivel
     {
-        return Nivel::firstOrCreate(['nombre_nivel' => $nombre], ['descripcion_nivel' => 'Sin descripción']);
+        $nombreNormalizado = $this->normalizeString($nombre);
+
+        return Nivel::all()->first(function ($n) use ($nombreNormalizado) {
+            return $this->normalizeString($n->nombre_nivel) === $nombreNormalizado;
+        });
     }
     public function getAllNiveles()
     {

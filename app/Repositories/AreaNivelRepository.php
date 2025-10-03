@@ -3,17 +3,17 @@
 namespace App\Repositories;
 
 use App\Models\AreaNivel;
+use App\Traits\NormalizeStringTrait;
 
 class AreaNivelRepository
 {
-    public function firstOrCreateAreaNivel($idArea, $idNivel, $idOlimpiada)
+    use NormalizeStringTrait;
+
+    public function findAreaNivel(int $areaId, int $nivelId, int $olimpiadaId): ?AreaNivel
     {
-        return AreaNivel::firstOrCreate(
-            [
-                'id_area' => $idArea,
-                'id_nivel' => $idNivel,
-                'id_olimpiada' => $idOlimpiada,
-            ]
-        );
+        return AreaNivel::where('id_area', $areaId)
+            ->where('id_nivel', $nivelId)
+            ->where('id_olimpiada', $olimpiadaId)
+            ->first();
     }
 }
