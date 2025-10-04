@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator;
 
 class StoreResponsableAcademicoRequest extends FormRequest
 {
@@ -45,4 +46,12 @@ class StoreResponsableAcademicoRequest extends FormRequest
             'area.unique' => 'Ya existe un responsable asignado a esta área.',
         ];
     }
+    protected function failedValidation(Validator $validator)
+{
+    throw new HttpResponseException(
+        response()->json([
+            'errors' => $validator->errors()
+        ], 422)
+    );
+}
 }
