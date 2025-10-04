@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ImportacionesController;
 use App\Http\Controllers\ListaCompetidoresController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -18,7 +19,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
-Route::post('/users/import', [ListaCompetidoresController::class, 'import']);
-
-Route::get('/competidores', [ListaCompetidoresController::class, 'index']);
+Route::prefix('importaciones')->group(function () {
+    Route::post('/preview', [ImportacionesController::class, 'preview']);     // Valida CSV sin guardar
+    Route::post('/confirmar', [ImportacionesController::class, 'confirmar']); // Guarda en BD
+});
 
