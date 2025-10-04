@@ -12,6 +12,7 @@ Route::post('/responsables', [ResponsableAcademicoController::class, 'store']);
 Route::get('/health', fn() => response()->json(['ok' => true]));
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::get('/responsables', [ResponsableAcademicoController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
