@@ -20,13 +20,13 @@ class ResponsableAcademicoController extends Controller
 
      public function index(): JsonResponse
     {
-        // 1. Obtener todos los responsables
+
         $responsables = ResponsableAcademico::all();
 
-        // 2. Definir catálogo de áreas disponibles
+
         $areasDisponibles = ['Matemáticas', 'Física', 'Química', 'Biología', 'Computación'];
 
-        // 3. Calcular KPIs
+       
         $total = $responsables->count();
         $cubiertas = $responsables->pluck('area')->unique()->count();
         $disponibles = count($areasDisponibles);
@@ -39,5 +39,22 @@ class ResponsableAcademicoController extends Controller
                 'disponibles' => $disponibles,
                  ]
         ]);
-        }
+
+        public function areasDisponibles(): JsonResponse
+{
+    // 1. Catálogo completo de áreas
+    $catalogo = ['Matemáticas', 'Física', 'Química', 'Biología', 'Computación'];
+
+    // 2. Áreas ya asignadas (de la base de datos)
+    $areasAsignadas = ResponsableAcademico::pluck('area')->toArray();
+
+    // 3. Áreas disponibles = catálogo - asignadas
+    $disponibles = array_values(array_diff($catalogo, $areasAsignadas));
+
+    return response()->json([
+        'areas_disponibles' => $disponibles
+    ]);
+}
+        
+}
 }
