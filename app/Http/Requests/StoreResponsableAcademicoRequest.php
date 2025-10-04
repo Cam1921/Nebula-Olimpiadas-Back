@@ -18,7 +18,7 @@ class StoreResponsableAcademicoRequest extends FormRequest
             'apellidos' => ['required', 'string', 'min:2', 'not_regex:/^\s*$/'],
             'email' => ['required', 'email:rfc', 'unique:responsable_academicos,email', 'max:255'],
             'telefono' => ['required', 'string', 'size:8', 'regex:/^[67]\d{7}$/'],
-            'area' => ['required', 'string', 'max:255'],
+            'area' => ['required', 'string', 'max:255', 'unique:responsable_academicos,area'],
         ];
     }
 
@@ -41,6 +41,8 @@ class StoreResponsableAcademicoRequest extends FormRequest
             'telefono.required' => 'El teléfono es obligatorio.',
             'telefono.size' => 'El teléfono debe tener exactamente 8 dígitos.',
             'telefono.regex' => 'El teléfono debe comenzar con 6 o 7 y contener solo dígitos (ej. 71234567).',
+
+            'area.unique' => 'Ya existe un responsable asignado a esta área.',
         ];
     }
 }
