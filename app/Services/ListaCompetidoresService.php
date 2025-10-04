@@ -6,7 +6,6 @@ use App\Repositories\TutorRepository;
 use App\Traits\NormalizeStringTrait;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\DB;
-use App\Repositories\PersonaRepository;
 use App\Repositories\InstitucionRepository;
 use App\Repositories\CompetidorRepository;
 use App\Repositories\AreaRepository;
@@ -58,7 +57,7 @@ class ListaCompetidoresService
     }
 
     /**
-     * PREVIEW: Validar CSV
+     * PREVIEW: Validar CSV y almacenar temporalmente en Redis
      */
     public function previewCsv($file)
     {
@@ -75,6 +74,7 @@ class ListaCompetidoresService
         $headers = array_map(fn($h) => $this->normalizeString($h), $headers);
 
         $required = ['nombre completo', 'ci', 'contacto tutor legal', 'unidad educativa', 'departamento', 'grado', 'area', 'nivel'];
+
         $required_normalized = array_map(fn($h) => $this->normalizeString($h), $required);
 
         $missing_required = array_diff($required_normalized, $headers);
@@ -86,7 +86,6 @@ class ListaCompetidoresService
                 ['found_headers' => $headers]
             );
         }
-
         $optional = ['contacto tutor academico'];
         $optional_normalized = array_map(fn($h) => $this->normalizeString($h), $optional);
         $missing_optional = array_diff($optional_normalized, $headers);
@@ -94,11 +93,11 @@ class ListaCompetidoresService
         if (!empty($missing_optional)) {
             $warnings[] = ['field' => 'headers', 'warning' => 'Opcionales faltantes: ' . implode(', ', $missing_optional)];
         }
-
         $validos = [];
         $errores = [];
         $filaIndex = 1;
         $olimpiada = $this->olimpiadaRepo->getOlimpiadaActiva();
+        $import_id = (string) Str::uuid();
 
         while (($data = fgetcsv($handle, 1000, ',')) !== false) {
             $filaIndex++;
@@ -108,14 +107,9 @@ class ListaCompetidoresService
             }
 
             $filaErrores = [];
-
             foreach ($required_normalized as $campo) {
                 if (empty($fila[$campo])) {
-                    $filaErrores[] = [
-                        'row' => $filaIndex,
-                        'field' => $campo,
-                        'error' => "El campo '$campo' no puede estar vacío"
-                    ];
+                    $filaErrores[] = ['row' => $filaIndex, 'field' => $campo, 'error' => "El campo '$campo' no puede estar vacío"];
                 }
             }
 
@@ -123,34 +117,50 @@ class ListaCompetidoresService
             $areaObj = $this->areaRepo->findByNombre($fila['area']);
             $nivelObj = $this->nivelRepo->findByNombre($fila['nivel']);
 
-            if (!$gradoObj) {
-                $filaErrores[] = ['row' => $filaIndex, 'field' => 'grado', 'error' => "El grado '{$fila['grado']}' no existe"];
-            }
-            if (!$areaObj) {
-                $filaErrores[] = ['row' => $filaIndex, 'field' => 'area', 'error' => "El área '{$fila['area']}' no existe"];
-            }
-            if (!$nivelObj) {
-                $filaErrores[] = ['row' => $filaIndex, 'field' => 'nivel', 'error' => "El nivel '{$fila['nivel']}' no existe"];
+            $telefonos = [
+                $fila['contacto tutor legal'] ?? null,
+                $fila['contacto tutor academico'] ?? null
+            ];
+            foreach ($telefonos as $tel) {
+                if ($tel && !preg_match('/^\+?\d[\d\s\-]{6,14}\d$/', $tel)) {
+                    $filaErrores[] = ['row' => $filaIndex, 'field' => 'contacto tutor', 'error' => "El teléfono '$tel' no es válido. Debe tener entre 6 y 14 dígitos."];
+                }
             }
 
+
+            if (!$gradoObj)
+                $filaErrores[] = ['row' => $filaIndex, 'field' => 'grado', 'error' => "El grado '{$fila['grado']}' no existe"];
+            if (!$areaObj)
+                $filaErrores[] = ['row' => $filaIndex, 'field' => 'area', 'error' => "El área '{$fila['area']}' no existe"];
+            if (!$nivelObj)
+                $filaErrores[] = ['row' => $filaIndex, 'field' => 'nivel', 'error' => "El nivel '{$fila['nivel']}' no existe"];
+
             if ($gradoObj && $nivelObj && !$this->gradoRepo->isGradoEnNivel($gradoObj->id, $nivelObj->id)) {
-                $filaErrores[] = [
-                    'row' => $filaIndex,
-                    'field' => 'grado/nivel',
-                    'error' => "El grado '{$fila['grado']}' no corresponde al nivel '{$fila['nivel']}'"
-                ];
+                $filaErrores[] = ['row' => $filaIndex, 'field' => 'grado/nivel', 'error' => "El grado '{$fila['grado']}' no corresponde al nivel '{$fila['nivel']}'"];
             }
 
             if ($areaObj && $nivelObj) {
                 $areaNivel = $this->areaNivelRepo->findAreaNivel($areaObj->id, $nivelObj->id, $olimpiada->id);
                 if (!$areaNivel) {
-                    $filaErrores[] = [
-                        'row' => $filaIndex,
-                        'field' => 'area/nivel',
-                        'error' => "No existe relación área-nivel configurada para la olimpiada"
-                    ];
+                    $filaErrores[] = ['row' => $filaIndex, 'field' => 'area/nivel', 'error' => "No existe relación área-nivel para la olimpiada"];
                 }
             }
+            $yaexiste = false;
+            if ($areaObj && $nivelObj) {
+                $yaexiste = $this->inscripcionRepo->existeInscripcion($fila['ci'], $areaObj->id, $nivelObj->id, $olimpiada->id);
+                if ($yaexiste) {
+                    $filaErrores[] = ['row' => $filaIndex, 'field' => 'ci', 'error' => "El competidor con '{$fila['ci']}' ya está registrado en esta área y nivel"];
+                }
+            }
+
+            // Guardar en tabla temporal
+            DB::table('import_temp')->insert([
+                'import_id' => $import_id,
+                'fila' => $filaIndex,
+                'datos' => empty($filaErrores) ? json_encode($fila) : null,
+                'errores' => empty($filaErrores) ? null : json_encode($filaErrores),
+                'created_at' => now()
+            ]);
 
             if (empty($filaErrores)) {
                 $validos[] = ['row' => $filaIndex, 'attributes' => $fila];
@@ -158,44 +168,58 @@ class ListaCompetidoresService
                 $errores = array_merge($errores, $filaErrores);
             }
         }
+
         fclose($handle);
 
         $meta = [
-            'import_id' => (string) Str::uuid(),
+            'import_id' => $import_id,
             'total_rows' => count($validos) + count($errores),
             'valid_rows' => count($validos),
             'invalid_rows' => count($errores)
         ];
 
-        if (!empty($errores)) {
-            return $this->errorResponse(
-                'Se encontraron errores en la validación del CSV',
-                $errores,
-                422,
-                $meta
-            );
-        }
-
-        return $this->successResponse(
-            'Validación de CSV completada',
-            $validos,
-            $meta,
-            200,
-            $warnings
-        );
+        return [
+            'status' => empty($errores) ? 'success' : 'error',
+            'code' => empty($errores) ? 200 : 422,
+            'data' => array_slice($validos, 0, 50),
+            'errors' => array_slice($errores, 0, 50),
+            'meta' => $meta,
+            'warnings' => $warnings,
+        ];
     }
 
     /**
-     * CONFIRMAR: Guardar CSV
+     * Obtener errores por import_id
      */
-    public function confirmarCsv(array $filasValidas)
+    public function getErroresCsv(string $import_id)
     {
-        if (empty($filasValidas)) {
-            return $this->errorResponse(
-                'No se enviaron filas válidas para importar',
-                [],
-                422
-            );
+        $filas = DB::table('import_temp')
+            ->where('import_id', $import_id)
+            ->whereNotNull('errores')
+            ->get();
+
+        $errores = [];
+        foreach ($filas as $fila) {
+            $rowErrores = json_decode($fila->errores, true);
+            if ($rowErrores) {
+                $errores = array_merge($errores, $rowErrores);
+            }
+        }
+        return $errores;
+    }
+
+    /**
+     * Confirmar importación
+     */
+    public function confirmarCsvImportId(string $import_id)
+    {
+        $filasValidas = DB::table('import_temp')
+            ->where('import_id', $import_id)
+            ->whereNotNull('datos')
+            ->get();
+
+        if ($filasValidas->isEmpty()) {
+            return $this->errorResponse('No hay filas válidas para importar', [], 422);
         }
 
         DB::beginTransaction();
@@ -204,24 +228,31 @@ class ListaCompetidoresService
             $listaInscripcion = $this->listaInscripcionRepo->firstOrCreateLista($olimpiada->id);
 
             $importados = [];
+
             foreach ($filasValidas as $fila) {
-                $gradoObj = $this->gradoRepo->findByNombre($fila['grado']);
-                $areaObj = $this->areaRepo->findByNombre($fila['area']);
-                $nivelObj = $this->nivelRepo->findByNombre($fila['nivel']);
+                $f = json_decode($fila->datos, true);
+
+                $gradoObj = $this->gradoRepo->findByNombre($f['grado']);
+                $areaObj = $this->areaRepo->findByNombre($f['area']);
+                $nivelObj = $this->nivelRepo->findByNombre($f['nivel']);
                 $areaNivel = $this->areaNivelRepo->findAreaNivel($areaObj->id, $nivelObj->id, $olimpiada->id);
 
-                $tutorLegal = $this->tutorRepo->firstOrCreatePersona(['telefono' => $fila['contacto tutor legal']]);
+                $tutorLegal = $this->tutorRepo->firstOrCreatePersona(['ci' => '', 'nombres' => '', 'apellidos' => '', 'telefono' => $f['contacto tutor legal'], 'email' => '']);
+                if ($f['contacto tutor academico'] ?? null) {
+                    $tutorAcademico = $this->tutorRepo->firstOrCreatePersona(['ci' => '', 'nombres' => '', 'apellidos' => '', 'telefono' => $f['contacto tutor academico'], 'email' => '']);
+                }
                 $institucion = $this->institucionRepo->firstOrCreateInstitucion([
-                    'nombre_institucion' => $fila['unidad educativa'],
-                    'departamento_institucion' => $fila['departamento'],
+                    'nombre_institucion' => $f['unidad educativa'],
+                    'departamento_institucion' => $f['departamento'],
+                    'municipio_institucion' => ''
                 ]);
 
-                $nombreSeparado = separarNombreCompleto($fila['nombre completo']);
+                $nombreSeparado = separarNombreCompleto($f['nombre completo']);
 
                 $competidor = $this->competidorRepo->createCompetidor([
                     'nombres' => $nombreSeparado['nombres'],
                     'apellidos' => $nombreSeparado['apellidos'],
-                    'ci' => $fila['ci'],
+                    'ci' => $f['ci'],
                     'id_grado' => $gradoObj->id,
                     'id_institucion' => $institucion->id,
                     'id_tutor_legal' => $tutorLegal->id,
@@ -231,6 +262,7 @@ class ListaCompetidoresService
                     'id_competidor' => $competidor->id,
                     'id_area_nivel' => $areaNivel->id,
                     'id_lista_inscripcion' => $listaInscripcion->id,
+                    'id_tutor_academico' => $tutorAcademico->id ?? null,
                     'gestion' => $olimpiada->gestion
                 ]);
 
@@ -238,6 +270,9 @@ class ListaCompetidoresService
             }
 
             DB::commit();
+
+            // Limpiar tabla temporal
+            DB::table('import_temp')->where('import_id', $import_id)->delete();
 
             return $this->successResponse(
                 'Importación confirmada exitosamente',
@@ -252,15 +287,9 @@ class ListaCompetidoresService
 
         } catch (\Throwable $e) {
             DB::rollBack();
-            \Log::error("Error en confirmarCsv: " . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return $this->errorResponse(
-                'Ocurrió un error al confirmar la importación. Intente nuevamente.',
-                [],
-                500
-            );
+            \Log::error("Error en confirmarCsvImportId: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return $this->errorResponse('Ocurrió un error al confirmar la importación', [], 500);
         }
     }
+
 }

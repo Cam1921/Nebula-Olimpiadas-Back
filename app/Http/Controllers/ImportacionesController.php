@@ -32,14 +32,27 @@ class ImportacionesController extends Controller
     /**
      * CONFIRMAR: Guarda en BD las filas válidas
      */
+    public function descargarErrores(Request $request)
+    {
+        $import_id = $request->input('import_id');
+        $errores = $this->competidoresService->getErroresCsv($import_id);
+        if (!$errores) {
+            return response()->json(['status' => 'error', 'message' => 'No se encontraron errores para este import_id'], 404);
+        }
+        $filename = "errores_{$import_id}.csv";
+        $handle = fopen('php://memory', 'r+');
+        fputcsv($handle, ['Fila', 'Campo', 'Error']);
+        foreach ($errores as $e) {
+            fputcsv($handle, [$e['row'], $e['field'], $e['error']]);
+        }
+        rewind($handle);
+        return response()->streamDownload(function () use ($handle) {
+            fpassthru($handle); }, $filename);
+    }
     public function confirmar(Request $request)
     {
-        $filasValidas = $request->input('filas_validas', []);
-        $resultado = $this->competidoresService->confirmarCsv($filasValidas);
-
-        return response()->json(
-            $resultado,
-            $resultado['code'] ?? 201
-        );
+        $import_id = $request->input('import_id');
+        $resultado = $this->competidoresService->confirmarCsvImportId($import_id);
+        return response()->json($resultado, $resultado['code'] ?? 201);
     }
 }

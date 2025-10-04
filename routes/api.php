@@ -20,7 +20,13 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::prefix('importaciones')->group(function () {
-    Route::post('/preview', [ImportacionesController::class, 'preview']);     // Valida CSV sin guardar
-    Route::post('/confirmar', [ImportacionesController::class, 'confirmar']); // Guarda en BD
+    // Valida CSV y guarda temporalmente filas válidas/errores en Redis
+    Route::post('/preview', [ImportacionesController::class, 'preview']);
+
+    // Confirma la importación usando import_id
+    Route::post('/confirmar', [ImportacionesController::class, 'confirmar']);
+
+    // Descarga CSV con errores usando import_id
+    Route::get('/errores', [ImportacionesController::class, 'descargarErrores']);
 });
 
