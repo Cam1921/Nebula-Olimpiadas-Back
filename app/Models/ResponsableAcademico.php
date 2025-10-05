@@ -9,10 +9,12 @@ class ResponsableAcademico extends Model
 {
     use HasFactory;
 
+    protected $table = 'responsable_academicos'; // ← plural coherente
+
     protected $fillable = [
         'nombre',
         'apellidos',
-        'email',
+        'correo',
         'telefono',
         'area',
     ];

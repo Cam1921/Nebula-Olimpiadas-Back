@@ -6,20 +6,20 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
         Schema::create('responsable_academicos', function (Blueprint $table) {
             $table->id();
             $table->string('nombre');
             $table->string('apellidos');
-            $table->string('email')->unique();
+            $table->string('correo')->unique();
             $table->string('telefono');
-            $table->string('area');
+            $table->string('area')->unique();
             $table->timestamps();
         });
     }
 
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('responsable_academicos');
     }

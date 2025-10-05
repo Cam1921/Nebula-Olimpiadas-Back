@@ -3,54 +3,38 @@
 namespace App\Http\Controllers;
 
 use App\Models\ResponsableAcademico;
-use App\Http\Requests\StoreResponsableAcademicoRequest;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class ResponsableAcademicoController extends Controller
 {
-    public function store(StoreResponsableAcademicoRequest $request): JsonResponse
+    /**
+     * Muestra la lista de todos los responsables académicos.
+     */
+    public function index(): JsonResponse
     {
-        $responsable = ResponsableAcademico::create($request->validated());
+        $responsables = ResponsableAcademico::all();
+        return response()->json($responsables);
+    }
+
+    /**
+     * Registra un nuevo responsable académico.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:255',
+            'apellidos' => 'required|string|max:255',
+            'correo' => 'required|email|unique:responsable_academicos,correo',
+            'telefono' => 'required|string|max:20',
+            'area' => 'required|string|unique:responsable_academicos,area',
+        ]);
+
+        $responsable = ResponsableAcademico::create($validated);
 
         return response()->json([
             'message' => 'Responsable académico registrado correctamente.',
             'data' => $responsable
         ], 201);
     }
-
-     public function index(): JsonResponse
-    {
-
-        $responsables = ResponsableAcademico::all();
-
-
-        $areasDisponibles = ['Matemáticas', 'Física', 'Química', 'Biología', 'Computación'];
-
-       
-        $total = $responsables->count();
-        $cubiertas = $responsables->pluck('area')->unique()->count();
-        $disponibles = count($areasDisponibles);
-
-        return response()->json([
-            'data' => $responsables,
-            'kpi' => [
-                'total' => $total,
-                'cubiertas' => $cubiertas,
-                'disponibles' => $disponibles,
-                 ]
-        ]);
-    }
-
-      public function areasDisponibles(): JsonResponse
-    {
-        $catalogo = ['Matemáticas', 'Física', 'Química', 'Biología', 'Computación'];
-        $areasAsignadas = ResponsableAcademico::pluck('area')->toArray();
-        $disponibles = array_values(array_diff($catalogo, $areasAsignadas));
-
-        return response()->json([
-            'areas_disponibles' => $disponibles
-        ]);
-    }
 }
-        
-

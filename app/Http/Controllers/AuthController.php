@@ -8,7 +8,6 @@ use App\Models\User;
 
 class AuthController extends Controller
 {
-    // Registro de usuario
     public function register(Request $request)
     {
         $request->validate([
@@ -31,7 +30,6 @@ class AuthController extends Controller
         ]);
     }
 
-    // Login
     public function login(Request $request)
     {
         if (!Auth::attempt($request->only('email', 'password'))) {
@@ -47,11 +45,9 @@ class AuthController extends Controller
         ]);
     }
 
-    // Logout
     public function logout(Request $request)
     {
         $request->user()->tokens()->delete();
-
         return response()->json(['message' => 'Sesión cerrada']);
     }
 }
