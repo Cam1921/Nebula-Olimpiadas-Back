@@ -17,4 +17,8 @@ class AreaRepository
             return $this->normalizeString($a->nombre_area) === $nombreNormalizado;
         });
     }
+    public function getAll()
+    {
+        return Area::all();
+    }
 }

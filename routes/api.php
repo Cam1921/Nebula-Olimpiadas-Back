@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\ImportacionesController;
 use App\Http\Controllers\ListaCompetidoresController;
 use App\Http\Controllers\ListarInscritosCotroller;
@@ -40,3 +41,8 @@ Route::prefix('competidores')->group(function () {
     Route::get('/listar', [ListarInscritosCotroller::class, 'listar']);
 });
 
+Route::prefix('catalogos')->group(function () {
+    Route::get('/areas', [CatalogoController::class, 'areas']);
+    Route::get('/niveles', [CatalogoController::class, 'niveles']);
+    Route::get('/', [CatalogoController::class, 'catalogos']); // retorna todo junto
+});

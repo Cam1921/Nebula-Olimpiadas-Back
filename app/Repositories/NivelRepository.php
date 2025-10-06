@@ -21,4 +21,8 @@ class NivelRepository
     {
         return Nivel::select('id', 'nombre_nivel')->get();
     }
+    public function getAll()
+    {
+        return Nivel::all();
+    }
 }
