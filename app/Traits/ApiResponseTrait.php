@@ -23,14 +23,17 @@ trait ApiResponseTrait
     }
 
     protected function errorResponse(
+        string $errorType = '',
         string $message,
         array $errors = [],
         int $code = 400,
-        array $meta = []
+        array $meta = [],
+
     ): array {
         return [
             'status' => 'error',
             'code' => $code,
+            'error_type' => $errorType,
             'message' => $message,
             'meta' => $meta,
             'data' => [],

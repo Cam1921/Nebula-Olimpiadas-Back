@@ -47,7 +47,8 @@ class ImportacionesController extends Controller
         }
         rewind($handle);
         return response()->streamDownload(function () use ($handle) {
-            fpassthru($handle); }, $filename);
+            fpassthru($handle);
+        }, $filename);
     }
     public function confirmar(Request $request)
     {

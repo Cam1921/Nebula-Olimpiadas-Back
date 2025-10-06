@@ -30,6 +30,9 @@ class ImportCompetidoresRequest extends FormRequest
     protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(response()->json([
+            'status' => 'error',
+            'message' => 'Error de validación',
+            'code' => 422,
             'error' => 'Error de validación',
             'detalle' => $validator->errors()
         ], 422));

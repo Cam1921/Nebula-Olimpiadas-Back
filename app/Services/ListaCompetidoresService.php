@@ -63,9 +63,11 @@ class ListaCompetidoresService
     {
         if (!$file) {
             return $this->errorResponse(
+                'file not found',
                 'Archivo no encontrado o no es un CSV válido',
                 [['field' => 'archivo', 'error' => 'Archivo inválido']],
-                400
+                400,
+
             );
         }
 
@@ -74,24 +76,42 @@ class ListaCompetidoresService
         $headers = array_map(fn($h) => $this->normalizeString($h), $headers);
 
         $required = ['nombre completo', 'ci', 'contacto tutor legal', 'unidad educativa', 'departamento', 'grado', 'area', 'nivel'];
+        $optional = ['contacto tutor academico'];
 
         $required_normalized = array_map(fn($h) => $this->normalizeString($h), $required);
+        $optional_normalized = array_map(fn($h) => $this->normalizeString($h), $optional);
 
         $missing_required = array_diff($required_normalized, $headers);
         if (!empty($missing_required)) {
             return $this->errorResponse(
+                'requered headers missing',
                 'Encabezados requeridos faltantes',
                 [['field' => 'headers', 'error' => implode(', ', $missing_required)]],
                 400,
                 ['found_headers' => $headers]
             );
         }
-        $optional = ['contacto tutor academico'];
-        $optional_normalized = array_map(fn($h) => $this->normalizeString($h), $optional);
+
+
         $missing_optional = array_diff($optional_normalized, $headers);
         $warnings = [];
         if (!empty($missing_optional)) {
             $warnings[] = ['field' => 'headers', 'warning' => 'Opcionales faltantes: ' . implode(', ', $missing_optional)];
+        }
+
+
+        $expectedHeaders = array_merge($required_normalized, $optional_normalized);
+        $unexpected = array_diff($headers, $expectedHeaders);
+
+
+        if (!empty($unexpected)) {
+            return $this->errorResponse(
+                'invalid headers',
+                'El archivo contiene encabezados no válidos o desconocidos',
+                [['field' => 'headers', 'error' => implode(', ', $unexpected)]],
+                400,
+                ['found_headers' => $headers]
+            );
         }
         $validos = [];
         $errores = [];
@@ -180,6 +200,7 @@ class ListaCompetidoresService
 
         return [
             'status' => empty($errores) ? 'success' : 'error',
+            'message' => empty($errores) ? 'Validado con exito' : 'Validado con errores',
             'code' => empty($errores) ? 200 : 422,
             'data' => array_slice($validos, 0, 50),
             'errors' => array_slice($errores, 0, 50),
@@ -219,7 +240,7 @@ class ListaCompetidoresService
             ->get();
 
         if ($filasValidas->isEmpty()) {
-            return $this->errorResponse('No hay filas válidas para importar', [], 422);
+            return $this->errorResponse('not found rows', 'No hay filas válidas para importar', [], 422);
         }
 
         DB::beginTransaction();
@@ -238,9 +259,11 @@ class ListaCompetidoresService
                 $areaNivel = $this->areaNivelRepo->findAreaNivel($areaObj->id, $nivelObj->id, $olimpiada->id);
 
                 $tutorLegal = $this->tutorRepo->firstOrCreatePersona(['ci' => '', 'nombres' => '', 'apellidos' => '', 'telefono' => $f['contacto tutor legal'], 'email' => '']);
+                $tutorAcademico = null;
                 if ($f['contacto tutor academico'] ?? null) {
                     $tutorAcademico = $this->tutorRepo->firstOrCreatePersona(['ci' => '', 'nombres' => '', 'apellidos' => '', 'telefono' => $f['contacto tutor academico'], 'email' => '']);
                 }
+
                 $institucion = $this->institucionRepo->firstOrCreateInstitucion([
                     'nombre_institucion' => $f['unidad educativa'],
                     'departamento_institucion' => $f['departamento'],
@@ -265,8 +288,18 @@ class ListaCompetidoresService
                     'id_tutor_academico' => $tutorAcademico->id ?? null,
                     'gestion' => $olimpiada->gestion
                 ]);
-
-                $importados[] = $competidor;
+                $competidorImportado = [
+                    'ci' => $f['ci'],
+                    'nombres' => $f['nombre completo'],
+                    'grado' => $f['grado'],
+                    'area' => $f['area'],
+                    'nivel' => $f['nivel'],
+                    'unidad educativa' => $f['unidad educativa'],
+                    'departamento' => $f['departamento'],
+                    'contacto tutor legal' => $f['contacto tutor legal'],
+                    'contacto tutor academico' => $f['contacto tutor academico'] ?? null
+                ];
+                $importados[] = $competidorImportado;
             }
 
             DB::commit();
@@ -288,7 +321,7 @@ class ListaCompetidoresService
         } catch (\Throwable $e) {
             DB::rollBack();
             \Log::error("Error en confirmarCsvImportId: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return $this->errorResponse('Ocurrió un error al confirmar la importación', [], 500);
+            return $this->errorResponse('server error', 'Ocurrió un error al confirmar la importación', [], 500);
         }
     }
 
