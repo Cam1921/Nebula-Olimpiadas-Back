@@ -169,7 +169,7 @@ class ListaCompetidoresService
             if ($areaObj && $nivelObj) {
                 $yaexiste = $this->inscripcionRepo->existeInscripcion($fila['ci'], $areaObj->id, $nivelObj->id, $olimpiada->id);
                 if ($yaexiste) {
-                    $filaErrores[] = ['row' => $filaIndex, 'field' => 'ci', 'error' => "El competidor con '{$fila['ci']}' ya está registrado en esta área y nivel"];
+                    $filaErrores[] = ['row' => $filaIndex, 'field' => 'ci', 'error' => "El competidor con el CI '{$fila['ci']}' ya está registrado en esta área y nivel"];
                 }
             }
 

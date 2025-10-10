@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+
+use App\Exports\CompetidoresExport;
 use App\Services\ListarCompetidoresService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
+
 
 class ListarInscritosCotroller extends Controller
 {
@@ -24,6 +28,7 @@ class ListarInscritosCotroller extends Controller
         try {
             $areaId = $request->input('area_id');
             $nivelId = $request->input('nivel_id');
+            $busqueda = $request->input('busqueda');
             $page = max((int) $request->input('page', 1), 1);
             $perPage = max((int) $request->input('per_page', 10), 1);
 
@@ -42,7 +47,7 @@ class ListarInscritosCotroller extends Controller
                 ], 400);
             }
 
-            $paginator = $this->competidorService->listarCompetidores($areaId, $nivelId, $page, $perPage);
+            $paginator = $this->competidorService->listarCompetidores($areaId, $nivelId, $busqueda, $page, $perPage);
 
             if ($paginator->total() === 0) {
                 return response()->json([
@@ -72,5 +77,16 @@ class ListarInscritosCotroller extends Controller
                 'errors' => ['Ocurrió un error inesperado al procesar la solicitud.']
             ], 500);
         }
+    }
+    public function exportar(Request $request)
+    {
+        $areaId = $request->query('area_id');
+        $nivelId = $request->query('nivel_id');
+        $busqueda = $request->query('busqueda');
+
+        return Excel::download(
+            new CompetidoresExport($areaId, $nivelId, $busqueda),
+            'competidores.xlsx'
+        );
     }
 }

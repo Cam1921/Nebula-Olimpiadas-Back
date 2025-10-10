@@ -39,6 +39,7 @@ Route::prefix('importaciones')->group(function () {
 
 Route::prefix('competidores')->group(function () {
     Route::get('/listar', [ListarInscritosCotroller::class, 'listar']);
+    Route::get('/exportar', [ListarInscritosCotroller::class, 'exportar']);
 });
 
 Route::prefix('catalogos')->group(function () {

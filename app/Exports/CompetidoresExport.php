@@ -1,16 +1,29 @@
 <?php
 
-namespace App\Services;
+namespace App\Exports;
 
-use App\Models\AreaNivel;
 use App\Models\Competidor;
 use DB;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 
-class ListarCompetidoresService
+class CompetidoresExport implements FromCollection, WithHeadings
 {
-    public function listarCompetidores(?int $areaId, ?int $nivelId, ?string $busqueda, int $page, int $perPage): LengthAwarePaginator
+    /**
+     * @return \Illuminate\Support\Collection
+     */
+    protected $areaId;
+    protected $nivelId;
+    protected $busqueda;
+
+    public function __construct($areaId = null, $nivelId = null, $busqueda = null)
+    {
+        $this->areaId = $areaId;
+        $this->nivelId = $nivelId;
+        $this->busqueda = $busqueda;
+    }
+
+    public function collection()
     {
         $query = Competidor::query()
             ->select([
@@ -35,15 +48,17 @@ class ListarCompetidoresService
             ->leftJoin('tutor as tutor_academico', 'tutor_academico.id', '=', 'inscripcion.id_tutor_academico');
 
 
-        // Aplicar filtros si se proporcionan
-        if ($areaId) {
-            $query->where('area_nivel.id_area', $areaId);
+        if ($this->areaId) {
+            $query->where('area_nivel.id_area', $this->areaId);
         }
 
-        if ($nivelId) {
-            $query->where('area_nivel.id_nivel', $nivelId);
+        if ($this->nivelId) {
+            $query->where('area_nivel.id_nivel', $this->nivelId);
         }
-        if ($busqueda) {
+
+
+        if ($this->busqueda) {
+            $busqueda = $this->busqueda;
             $query->where(function ($q) use ($busqueda) {
                 $q->where(DB::raw("CONCAT(competidor.nombres, ' ', competidor.apellidos)"), 'LIKE', "%{$busqueda}%")
                     ->orWhere('competidor.ci', 'LIKE', "%{$busqueda}%")
@@ -51,8 +66,22 @@ class ListarCompetidoresService
             });
         }
 
-        // Paginación directamente en la base de datos
-        return $query->paginate($perPage, ['*'], 'page', $page);
+        return $query->get();
+    }
+
+    public function headings(): array
+    {
+        return [
+            'ID',
+            'Nombre',
+            'CI',
+            'Grado',
+            'Unidad Educativa',
+            'Departamento',
+            'Área',
+            'Nivel',
+            'Contacto Tutor Legal',
+            'Contacto Tutor Académico',
+        ];
     }
 }
-
