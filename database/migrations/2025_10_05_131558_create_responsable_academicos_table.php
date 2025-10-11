@@ -8,13 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('responsable_academicos', function (Blueprint $table) {
+         Schema::create('responsable_academicos', function (Blueprint $table) {
             $table->id();
             $table->string('nombre');
             $table->string('apellidos');
             $table->string('correo')->unique();
-            $table->string('telefono');
-            $table->string('area')->unique();
+            $table->string('telefono')->unique(); // ✅ único
+            $table->string('ci')->unique();       // ✅ CI único, 6-10 dígitos
+            $table->string('area')->unique();     // ✅ área única
+            $table->date('fecha_registro');       // ✅ solo fecha
             $table->timestamps();
         });
     }
