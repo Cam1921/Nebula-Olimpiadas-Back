@@ -29,11 +29,11 @@ class StoreResponsableAcademicoRequest extends FormRequest
     {
         return [
             'nombre.required' => 'El nombre es obligatorio.',
-            'nombre.min' => 'El nombre debe tener al menos 2 caracteres.',
+            'nombre.min' => 'El nombre debe tener al menos 4 caracteres.',
             'nombre.regex' => 'El nombre solo puede contener letras y espacios.',
 
             'apellidos.required' => 'Los apellidos son obligatorios.',
-            'apellidos.min' => 'Los apellidos deben tener al menos 2 caracteres.',
+            'apellidos.min' => 'Los apellidos deben tener al menos 4 caracteres.',
             'apellidos.regex' => 'Los apellidos solo pueden contener letras y espacios.',
 
             'correo.required' => 'El correo es obligatorio.',
