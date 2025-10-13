@@ -7,6 +7,7 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -16,15 +17,16 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id_competidor
  * @property int $id_area_nivel
  * @property int $id_lista_inscripcion
- * @property int $id_tutor_academico
- * @property string $gestion
+ * @property int|null $id_tutor_academico
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * 
  * @property Competidor $competidor
  * @property AreaNivel $area_nivel
  * @property ListaInscripcion $lista_inscripcion
- * @property Tutor $tutor
+ * @property Tutor|null $tutor
+ * @property Collection|Clasificacion[] $clasificacions
+ * @property Collection|Evaluacion[] $evaluacions
  *
  * @package App\Models
  */
@@ -44,7 +46,6 @@ class Inscripcion extends Model
 		'id_area_nivel',
 		'id_lista_inscripcion',
 		'id_tutor_academico'
-
 	];
 
 	public function competidor()
@@ -65,5 +66,15 @@ class Inscripcion extends Model
 	public function tutor()
 	{
 		return $this->belongsTo(Tutor::class, 'id_tutor_academico');
+	}
+
+	public function clasificacions()
+	{
+		return $this->hasMany(Clasificacion::class, 'id_inscrito');
+	}
+
+	public function evaluacions()
+	{
+		return $this->hasMany(Evaluacion::class, 'id_inscripcion');
 	}
 }

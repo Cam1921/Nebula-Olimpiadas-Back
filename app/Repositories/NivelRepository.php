@@ -25,4 +25,26 @@ class NivelRepository
     {
         return Nivel::all();
     }
+    public function firstOrCreate(array $data)
+    {
+        $nombre = $this->normalizeString($data['nombre_nivel']);
+
+        return Nivel::whereRaw('LOWER(unaccent(nombre_nivel)) = ?', [$nombre])
+            ->first() ?? Nivel::create([
+                        'nombre_nivel' => trim($data['nombre_nivel']),
+                    ]);
+    }
+    public function getAllNormalized(): array
+    {
+        $niveles = Nivel::all(); // Trae todos los niveles de la base de datos
+
+        $normalizedNiveles = [];
+
+        foreach ($niveles as $nivel) {
+            $normalizedName = $this->normalizeString($nivel->nombre_nivel);
+            $normalizedNiveles[$normalizedName] = $nivel;
+        }
+
+        return $normalizedNiveles;
+    }
 }

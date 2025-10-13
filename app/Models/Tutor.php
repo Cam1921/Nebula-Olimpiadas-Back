@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Class Persona
+ * Class Tutor
  * 
  * @property int $id
  * @property string $ci

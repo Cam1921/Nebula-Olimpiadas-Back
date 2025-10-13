@@ -14,7 +14,8 @@ use Illuminate\Database\Eloquent\Model;
  * Class Competidor
  * 
  * @property int $id
- * @property string $nombre_completo
+ * @property string $nombres
+ * @property string $apellidos
  * @property string $ci
  * @property int $id_grado
  * @property int $id_institucion

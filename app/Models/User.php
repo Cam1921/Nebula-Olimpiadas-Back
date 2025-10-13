@@ -5,6 +5,7 @@
  */
 
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
@@ -12,7 +13,6 @@ use Carbon\Carbon;
 
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-
 /**
  * Class User
  * 
@@ -48,4 +48,9 @@ class User extends Authenticatable
 		'password',
 		'remember_token'
 	];
+
+	public function personas()
+	{
+		return $this->hasMany(Persona::class, 'id_usuario');
+	}
 }

@@ -18,8 +18,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * 
- * @property Collection|Area[] $areas
  * @property Collection|Grado[] $grados
+ * @property Collection|Area[] $areas
+ * @property Collection|Asignacion[] $asignacions
  *
  * @package App\Models
  */
@@ -31,6 +32,13 @@ class Nivel extends Model
 		'nombre_nivel'
 	];
 
+	public function grados()
+	{
+		return $this->belongsToMany(Grado::class, 'nivel_grado', 'id_nivel', 'id_grado')
+					->withPivot('id', 'id_olimpiada')
+					->withTimestamps();
+	}
+
 	public function areas()
 	{
 		return $this->belongsToMany(Area::class, 'area_nivel', 'id_nivel', 'id_area')
@@ -38,10 +46,8 @@ class Nivel extends Model
 					->withTimestamps();
 	}
 
-	public function grados()
+	public function asignacions()
 	{
-		return $this->belongsToMany(Grado::class, 'nivel_grado', 'id_nivel', 'id_grado')
-					->withPivot('id', 'id_olimpiada')
-					->withTimestamps();
+		return $this->hasMany(Asignacion::class, 'id_nivel');
 	}
 }
