@@ -1,14 +1,14 @@
 <?php
 // app/Http/Controllers/ResponsableAcademicoController.php
 namespace App\Http\Controllers;
-
 use App\Models\ResponsableAcademico;
 use App\Http\Requests\StoreResponsableAcademicoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-
 class ResponsableAcademicoController extends Controller
 {
+    // ... (todo el contenido del controlador, solo una vez)
+
     public function index(): JsonResponse
     {
         $responsables = ResponsableAcademico::all()->map(function ($r) {
