@@ -14,20 +14,18 @@ use Illuminate\Database\Eloquent\Model;
  * 
  * @property int $id
  * @property float|null $nota
- * @property string $descripción
+ * @property string|null $descripción
  * @property string $estado
  * @property bool $respeto
  * @property bool $integridad
  * @property bool $puntualidad
  * @property int $id_inscripcion
- * @property int $id_ompiada_fase
- * @property int $id_evaluador
+ * @property int $id_fase
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * 
  * @property Inscripcion $inscripcion
- * @property OlimpiadaFase $olimpiada_fase
- * @property Persona $persona
+ * @property Fase $fase
  *
  * @package App\Models
  */
@@ -41,8 +39,7 @@ class Evaluacion extends Model
 		'integridad' => 'bool',
 		'puntualidad' => 'bool',
 		'id_inscripcion' => 'int',
-		'id_ompiada_fase' => 'int',
-		'id_evaluador' => 'int'
+		'id_fase' => 'int'
 	];
 
 	protected $fillable = [
@@ -53,8 +50,7 @@ class Evaluacion extends Model
 		'integridad',
 		'puntualidad',
 		'id_inscripcion',
-		'id_ompiada_fase',
-		'id_evaluador'
+		'id_fase'
 	];
 
 	public function inscripcion()
@@ -62,13 +58,8 @@ class Evaluacion extends Model
 		return $this->belongsTo(Inscripcion::class, 'id_inscripcion');
 	}
 
-	public function olimpiada_fase()
+	public function fase()
 	{
-		return $this->belongsTo(OlimpiadaFase::class, 'id_ompiada_fase');
-	}
-
-	public function persona()
-	{
-		return $this->belongsTo(Persona::class, 'id_evaluador');
+		return $this->belongsTo(Fase::class, 'id_fase');
 	}
 }

@@ -14,6 +14,9 @@ return new class extends Migration {
             $table->bigIncrements('id');
             $table->string('nombre');
             $table->string('descripcion');
+            $table->string('estado')->default('en proceso');
+            $table->date('fecha_inicio');
+            $table->date('fecha_fin');
             $table->timestamps();
         });
     }

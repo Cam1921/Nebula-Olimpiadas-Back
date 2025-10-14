@@ -20,7 +20,6 @@ use Illuminate\Database\Eloquent\Model;
  * 
  * @property Collection|Grado[] $grados
  * @property Collection|Area[] $areas
- * @property Collection|Asignacion[] $asignacions
  *
  * @package App\Models
  */
@@ -44,10 +43,5 @@ class Nivel extends Model
 		return $this->belongsToMany(Area::class, 'area_nivel', 'id_nivel', 'id_area')
 					->withPivot('id', 'id_olimpiada')
 					->withTimestamps();
-	}
-
-	public function asignacions()
-	{
-		return $this->hasMany(Asignacion::class, 'id_nivel');
 	}
 }

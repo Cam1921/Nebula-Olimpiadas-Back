@@ -32,6 +32,8 @@ class Rol extends Model
 
 	public function personas()
 	{
-		return $this->hasMany(Persona::class, 'id_rol');
+		return $this->belongsToMany(Persona::class, 'persona_rol', 'id_rol', 'id_persona')
+					->withPivot('id')
+					->withTimestamps();
 	}
 }

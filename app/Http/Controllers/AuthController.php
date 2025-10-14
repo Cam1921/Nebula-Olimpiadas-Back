@@ -8,7 +8,6 @@ use App\Models\User;
 
 class AuthController extends Controller
 {
-    // Registro de usuario
     public function register(Request $request)
     {
         $request->validate([
@@ -31,31 +30,41 @@ class AuthController extends Controller
         ], 201);
     }
 
-    // Login
     public function login(Request $request)
     {
         if (!Auth::attempt($request->only('email', 'password'))) {
             return response()->json(['message' => 'Credenciales inválidas'], 401);
         }
 
-        $user = Auth::user();
+        $user = Auth::user()->load('personas.rols');
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'user' => $user,
+            'rol' => $user->personas
+                ->flatMap(fn($p) => $p->rols->pluck('nombre'))
+                ->unique()
+                ->values(),
             'token' => $token,
         ]);
     }
 
-    // Logout
     public function logout(Request $request)
     {
         $request->user()->tokens()->delete();
-
         return response()->json(['message' => 'Sesión cerrada']);
     }
     public function me(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user()->load('personas.rols');
+
+        return response()->json([
+            'user' => $user,
+            'rol' => $user->personas
+                ->flatMap(fn($p) => $p->rols->pluck('nombre'))
+                ->unique()
+                ->values(),
+        ]);
     }
 }
+

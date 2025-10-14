@@ -10,10 +10,10 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('asignacion', function (Blueprint $table) {
-            $table->bigIncrements('id');
+        Schema::create('persona_rol', function (Blueprint $table) {
+            $table->id();
             $table->foreignId('id_persona')->constrained('persona')->onDelete('cascade');
-            $table->foreignId('id_area_nivel')->constrained('area_nivel')->onDelete('cascade');
+            $table->foreignId('id_rol')->constrained('rol')->onDelete('cascade');
             $table->timestamps();
         });
     }
@@ -23,6 +23,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('asignacion');
+        Schema::dropIfExists('persona_rol');
     }
 };

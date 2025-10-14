@@ -12,13 +12,12 @@ return new class extends Migration {
     {
         Schema::create('persona', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('ci');
+            $table->string('ci')->unique();
             $table->string('nombres');
             $table->string('apellidos');
-            $table->string('telefono');
-            $table->string('email');
+            $table->string('telefono')->unique();
+            $table->string('email')->unique();
             $table->foreignId('id_usuario')->constrained('users')->onDelete('cascade');
-            $table->foreignId('id_rol')->constrained('rol')->onDelete('cascade');
             $table->timestamps();
         });
     }

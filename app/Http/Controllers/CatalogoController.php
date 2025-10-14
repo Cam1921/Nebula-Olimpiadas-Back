@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Repositories\AreaRepository;
 use App\Repositories\NivelRepository;
+use DB;
 use Illuminate\Http\Request;
 
 class CatalogoController extends Controller
@@ -28,6 +29,37 @@ class CatalogoController extends Controller
     public function niveles()
     {
         return response()->json($this->nivelRepo->getAll());
+    }
+
+    public function areaNiveles()
+    {
+        // Trae todas las áreas
+        $areas = $this->areaRepo->getAll();
+
+        $result = $areas->map(function ($area) {
+            // Obtener los niveles asociados desde la tabla pivote
+            $niveles = DB::table('area_nivel')
+                ->join('nivel', 'area_nivel.id_nivel', '=', 'nivel.id')
+                ->where('area_nivel.id_area', $area->id)
+                ->select('nivel.id', 'nivel.nombre_nivel')
+                ->get();
+
+            return [
+                'id' => $area->id,
+                'nombre' => $area->nombre_area,
+                'niveles' => $niveles
+            ];
+        });
+
+
+        return response()->json(
+            [
+                'status' => 'success',
+                'message' => 'area y niveles obtendidos correctamente',
+                'data' => $result
+            ]
+
+        );
     }
 
     // Devuelve todo junto

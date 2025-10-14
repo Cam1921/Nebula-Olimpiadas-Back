@@ -1,9 +1,12 @@
 <?php
-// config/cors.php
+
 return [
-  'paths' => ['api/*'],
-  'allowed_methods' => ['*'],
-  'allowed_origins' => ['http://localhost:5173'],
-  'allowed_headers' => ['*'],
-  'supports_credentials' => false, // <-- tokens, no cookies
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'allowed_methods' => ['*'],
+    'allowed_origins' => ['http://localhost:5173'], // Tu frontend de Vite
+    'allowed_origins_patterns' => [],
+    'allowed_headers' => ['*'],
+    'exposed_headers' => [],
+    'max_age' => 0,
+    'supports_credentials' => true, // Importante para Sanctum
 ];

@@ -13,14 +13,13 @@ return new class extends Migration {
         Schema::create('evaluacion', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->decimal('nota', 5, 2)->nullable();
-            $table->string('descripción');
+            $table->string('descripción')->nullable();
             $table->string('estado')->default('pendiente');
             $table->boolean('respeto')->default(false);
             $table->boolean('integridad')->default(false);
             $table->boolean('puntualidad')->default(false);
             $table->foreignId('id_inscripcion')->constrained('inscripcion')->onDelete('cascade');
-            $table->foreignId('id_ompiada_fase')->constrained('olimpiada_fase')->onDelete('cascade');
-            $table->foreignId('id_evaluador')->constrained('persona')->onDelete('cascade');
+            $table->foreignId('id_fase')->constrained('fase')->onDelete('cascade');
             $table->timestamps();
         });
     }

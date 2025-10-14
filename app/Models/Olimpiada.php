@@ -24,7 +24,6 @@ use Illuminate\Database\Eloquent\Model;
  * @property Collection|NivelGrado[] $nivel_grados
  * @property Collection|ListaInscripcion[] $lista_inscripcions
  * @property Collection|AreaNivel[] $area_nivels
- * @property Collection|Fase[] $fases
  *
  * @package App\Models
  */
@@ -58,12 +57,5 @@ class Olimpiada extends Model
 	public function area_nivels()
 	{
 		return $this->hasMany(AreaNivel::class, 'id_olimpiada');
-	}
-
-	public function fases()
-	{
-		return $this->belongsToMany(Fase::class, 'olimpiada_fase', 'id_olimpiada', 'id_fase')
-					->withPivot('id', 'estado', 'fecha_inicio', 'fecha_fin')
-					->withTimestamps();
 	}
 }

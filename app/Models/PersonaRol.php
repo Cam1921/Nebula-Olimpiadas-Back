@@ -10,31 +10,31 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Class Asignacion
+ * Class PersonaRol
  * 
  * @property int $id
  * @property int $id_persona
- * @property int $id_area_nivel
+ * @property int $id_rol
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * 
  * @property Persona $persona
- * @property AreaNivel $area_nivel
+ * @property Rol $rol
  *
  * @package App\Models
  */
-class Asignacion extends Model
+class PersonaRol extends Model
 {
-	protected $table = 'asignacion';
+	protected $table = 'persona_rol';
 
 	protected $casts = [
 		'id_persona' => 'int',
-		'id_area_nivel' => 'int'
+		'id_rol' => 'int'
 	];
 
 	protected $fillable = [
 		'id_persona',
-		'id_area_nivel'
+		'id_rol'
 	];
 
 	public function persona()
@@ -42,8 +42,8 @@ class Asignacion extends Model
 		return $this->belongsTo(Persona::class, 'id_persona');
 	}
 
-	public function area_nivel()
+	public function rol()
 	{
-		return $this->belongsTo(AreaNivel::class, 'id_area_nivel');
+		return $this->belongsTo(Rol::class, 'id_rol');
 	}
 }

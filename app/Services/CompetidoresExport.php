@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Exports;
+namespace App\Services;
 
 use App\Models\Competidor;
 use DB;

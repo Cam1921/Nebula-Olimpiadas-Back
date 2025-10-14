@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property Nivel $nivel
  * @property Olimpiada $olimpiada
  * @property Collection|Inscripcion[] $inscripcions
+ * @property Collection|Asignacion[] $asignacions
  *
  * @package App\Models
  */
@@ -61,5 +62,10 @@ class AreaNivel extends Model
 	public function inscripcions()
 	{
 		return $this->hasMany(Inscripcion::class, 'id_area_nivel');
+	}
+
+	public function asignacions()
+	{
+		return $this->hasMany(Asignacion::class, 'id_area_nivel');
 	}
 }

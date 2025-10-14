@@ -16,10 +16,13 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property string $nombre
  * @property string $descripcion
+ * @property string $estado
+ * @property Carbon $fecha_inicio
+ * @property Carbon $fecha_fin
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * 
- * @property Collection|Olimpiada[] $olimpiadas
+ * @property Collection|Evaluacion[] $evaluacions
  *
  * @package App\Models
  */
@@ -27,15 +30,21 @@ class Fase extends Model
 {
 	protected $table = 'fase';
 
-	protected $fillable = [
-		'nombre',
-		'descripcion'
+	protected $casts = [
+		'fecha_inicio' => 'datetime',
+		'fecha_fin' => 'datetime'
 	];
 
-	public function olimpiadas()
+	protected $fillable = [
+		'nombre',
+		'descripcion',
+		'estado',
+		'fecha_inicio',
+		'fecha_fin'
+	];
+
+	public function evaluacions()
 	{
-		return $this->belongsToMany(Olimpiada::class, 'olimpiada_fase', 'id_fase', 'id_olimpiada')
-					->withPivot('id', 'estado', 'fecha_inicio', 'fecha_fin')
-					->withTimestamps();
+		return $this->hasMany(Evaluacion::class, 'id_fase');
 	}
 }
