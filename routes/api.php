@@ -61,7 +61,7 @@ Route::prefix('catalogos')->group(function () {
     Route::get('/', [CatalogoController::class, 'catalogos']);
 });
 Route::prefix('evaluaciones')->group(function () {
-    Route::get('evaluadores/{id}', [EvaluacionesController::class, 'indexByEvaluador']);
+    Route::get('evaluador/{id}', [EvaluacionesController::class, 'indexByEvaluador']);
 });
 
 

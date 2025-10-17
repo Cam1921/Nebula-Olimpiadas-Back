@@ -13,7 +13,7 @@ return new class extends Migration {
         Schema::create('evaluacion', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->decimal('nota', 5, 2)->nullable();
-            $table->string('descripción')->nullable();
+            $table->string('descripcion')->nullable();
             $table->string('estado')->default('pendiente');
             $table->boolean('respeto')->default(false);
             $table->boolean('integridad')->default(false);

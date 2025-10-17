@@ -44,7 +44,7 @@ class Evaluacion extends Model
 
 	protected $fillable = [
 		'nota',
-		'descripción',
+		'descripcion',
 		'estado',
 		'respeto',
 		'integridad',
