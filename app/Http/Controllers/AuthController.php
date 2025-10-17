@@ -10,7 +10,6 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-
         try {
             $request->validate([
                 'ci' => 'required|string|unique:persona',
