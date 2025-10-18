@@ -60,7 +60,7 @@ class ResponsableAcademicoController extends Controller
         $request->validate([
             'nombre' => 'required|string|min:3',
             'apellidos' => 'required|string|min:3',
-            'correo' => "required|email|unique:responsable_academicos,correo,$id",
+            'correo' => "required|email|max:70|unique:responsable_academicos,correo,$id",
             'telefono' => "required|string|size:8|regex:/^[67]\d{7}$/|unique:responsable_academicos,telefono,$id",
             'ci' => "required|numeric|digits_between:6,10|unique:responsable_academicos,ci,$id",
             'area' => "required|string|max:255|unique:responsable_academicos,area,$id",
