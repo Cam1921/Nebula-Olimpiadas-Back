@@ -1,14 +1,14 @@
 <?php
 // app/Http/Controllers/ResponsableAcademicoController.php
 namespace App\Http\Controllers;
+
 use App\Models\ResponsableAcademico;
 use App\Http\Requests\StoreResponsableAcademicoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+
 class ResponsableAcademicoController extends Controller
 {
-    // ... (todo el contenido del controlador, solo una vez)
-
     public function index(): JsonResponse
     {
         $responsables = ResponsableAcademico::all()->map(function ($r) {
@@ -58,8 +58,8 @@ class ResponsableAcademicoController extends Controller
     public function update(Request $request, $id): JsonResponse
     {
         $request->validate([
-            'nombre' => 'required|string|min:2',
-            'apellidos' => 'required|string|min:2',
+            'nombre' => 'required|string|min:3',
+            'apellidos' => 'required|string|min:3',
             'correo' => "required|email|unique:responsable_academicos,correo,$id",
             'telefono' => "required|string|size:8|regex:/^[67]\d{7}$/|unique:responsable_academicos,telefono,$id",
             'ci' => "required|numeric|digits_between:6,10|unique:responsable_academicos,ci,$id",
@@ -74,7 +74,7 @@ class ResponsableAcademicoController extends Controller
             'telefono' => $request->telefono,
             'ci' => $request->ci,
             'area' => $request->area,
-            'fecha_registro' => now()->toDateString(), // ✅ actualiza fecha al editar
+            'fecha_registro' => now()->toDateString(),
         ]);
 
         return response()->json([
@@ -102,17 +102,22 @@ class ResponsableAcademicoController extends Controller
         ]);
     }
 
-    // Endpoint para verificar existencia (opcional, pero útil)
+    // Endpoint para verificar existencia (con soporte para excludeId)
     public function check(Request $request): JsonResponse
     {
         $field = $request->query('field');
         $value = $request->query('value');
+        $excludeId = $request->query('excludeId'); // ← Nueva línea
 
         if (!in_array($field, ['correo', 'telefono', 'ci'])) {
             return response()->json(['error' => 'Campo no permitido'], 400);
         }
 
-        $exists = ResponsableAcademico::where($field, $value)->exists();
+        $query = ResponsableAcademico::where($field, $value);
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId); // ← Nueva línea
+        }
+        $exists = $query->exists();
 
         return response()->json(['exists' => $exists]);
     }
