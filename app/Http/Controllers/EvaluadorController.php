@@ -75,13 +75,13 @@ class EvaluadorController extends Controller
     public function update(Request $request, $id): JsonResponse
     {
         $request->validate([
-            'nombre' => 'required|string|min:2',
-            'apellidos' => 'required|string|min:2',
+            'nombre' => 'required|string|min:3',
+            'apellidos' => 'required|string|min:3',
             'correo' => "required|email|unique:evaluadores,correo,$id",
             'telefono' => "required|string|size:8|regex:/^[67]\d{7}$/|unique:evaluadores,telefono,$id",
             'ci' => "required|numeric|digits_between:6,10|unique:evaluadores,ci,$id",
             'area' => 'required|string|max:255',
-            'nivel' => 'required|string|in:Primaria,Secundaria',
+            'nivel' => 'required|string|max:255',
         ]);
 
         $evaluador = Evaluador::findOrFail($id);
@@ -142,12 +142,18 @@ class EvaluadorController extends Controller
     {
         $field = $request->query('field');
         $value = $request->query('value');
+        $excludeId = $request->query('excludeId'); // ← Nueva línea
 
         if (!in_array($field, ['correo', 'telefono', 'ci'])) {
             return response()->json(['error' => 'Campo no permitido'], 400);
         }
 
-        $exists = Evaluador::where($field, $value)->exists();
+        $query = Evaluador::where($field, $value);
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId); // ← Nueva línea
+        }
+        $exists = $query->exists();
+
         return response()->json(['exists' => $exists]);
     }
 }

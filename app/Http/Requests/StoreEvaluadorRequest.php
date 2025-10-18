@@ -22,7 +22,7 @@ class StoreEvaluadorRequest extends FormRequest
             'telefono' => ['required', 'string', 'size:8', 'regex:/^[67]\d{7}$/', 'unique:evaluadores,telefono'],
             'ci' => ['required', 'string', 'min:6', 'max:10', 'regex:/^\d{6,10}$/', 'unique:evaluadores,ci'],
             'area' => ['required', 'string', 'max:255'],
-            'nivel' => ['required', 'string', 'in:Primaria,Secundaria'], // ✅ Solo estos dos valores
+            'nivel' => ['required', 'string', 'max:255'], // ✅ Solo estos dos valores
         ];
     }
 
@@ -50,7 +50,7 @@ class StoreEvaluadorRequest extends FormRequest
             'area.required' => 'El área es obligatoria.',
             
             'nivel.required' => 'El nivel es obligatorio.',
-            'nivel.in' => 'El nivel debe ser "Primaria" o "Secundaria".',
+            
         ];
     }
 
