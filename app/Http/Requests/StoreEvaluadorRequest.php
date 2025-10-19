@@ -18,11 +18,11 @@ class StoreEvaluadorRequest extends FormRequest
         return [
             'nombre' => ['required', 'string', 'min:2', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/'],
             'apellidos' => ['required', 'string', 'min:2', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/'],
-            'correo' => ['required', 'email:rfc,dns', 'unique:evaluadores,correo'],
+            'correo' => ['required', 'email:rfc,dns', 'max:70', 'unique:evaluadores,correo'],
             'telefono' => ['required', 'string', 'size:8', 'regex:/^[67]\d{7}$/', 'unique:evaluadores,telefono'],
             'ci' => ['required', 'string', 'min:6', 'max:10', 'regex:/^\d{6,10}$/', 'unique:evaluadores,ci'],
             'area' => ['required', 'string', 'max:255'],
-            'nivel' => ['required', 'string', 'in:Primaria,Secundaria'], // ✅ Solo estos dos valores
+            'nivel' => ['required', 'string', 'max:255'], // ✅ Solo estos dos valores
         ];
     }
 
@@ -38,6 +38,7 @@ class StoreEvaluadorRequest extends FormRequest
             'correo.required' => 'El correo es obligatorio.',
             'correo.email' => 'El correo debe tener un formato válido (ej. nombre@dominio.com).',
             'correo.unique' => 'Ya existe un evaluador con este correo.',
+            'correo.max' => 'El correo no debe exceder los 70 caracteres.',
             'telefono.required' => 'El teléfono es obligatorio.',
             'telefono.size' => 'El teléfono debe tener exactamente 8 dígitos.',
             'telefono.regex' => 'El teléfono debe comenzar con 6 o 7 y contener solo dígitos.',
@@ -50,7 +51,7 @@ class StoreEvaluadorRequest extends FormRequest
             'area.required' => 'El área es obligatoria.',
 
             'nivel.required' => 'El nivel es obligatorio.',
-            'nivel.in' => 'El nivel debe ser "Primaria" o "Secundaria".',
+            
         ];
     }
 

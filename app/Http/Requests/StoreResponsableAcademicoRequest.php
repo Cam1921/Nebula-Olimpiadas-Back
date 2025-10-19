@@ -18,7 +18,7 @@ class StoreResponsableAcademicoRequest extends FormRequest
         return [
             'nombre' => ['required', 'string', 'min:2', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/'],
             'apellidos' => ['required', 'string', 'min:2', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/'],
-            'correo' => ['required', 'email:rfc,dns', 'unique:responsable_academicos,correo'],
+            'correo' => ['required', 'email:rfc,dns','max:70', 'unique:responsable_academicos,correo'],
             'telefono' => ['required', 'string', 'size:8', 'regex:/^[67]\d{7}$/', 'unique:responsable_academicos,telefono'],
             'ci' => ['required', 'string', 'min:6', 'max:10', 'regex:/^\d{6,10}$/', 'unique:responsable_academicos,ci'],
             'area' => ['required', 'string', 'max:255', 'unique:responsable_academicos,area'],
@@ -39,6 +39,7 @@ class StoreResponsableAcademicoRequest extends FormRequest
             'correo.required' => 'El correo es obligatorio.',
             'correo.email' => 'El correo debe tener un formato válido (ej. nombre@dominio.com).',
             'correo.unique' => 'Ya existe un responsable con este correo.',
+            'correo.max' => 'El correo no debe exceder los 70 caracteres.',
 
             'telefono.required' => 'El teléfono es obligatorio.',
             'telefono.size' => 'El teléfono debe tener exactamente 8 dígitos.',
