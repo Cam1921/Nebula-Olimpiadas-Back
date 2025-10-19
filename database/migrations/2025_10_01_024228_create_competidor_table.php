@@ -18,6 +18,10 @@ return new class extends Migration {
             $table->bigInteger('id_grado');
             $table->bigInteger('id_institucion');
             $table->bigInteger('id_tutor_legal');
+            $table->foreignId('id_equipo')
+                ->nullable()              // Permite que sea NULL
+                ->constrained('equipo')   // Crea la llave foránea
+                ->onDelete('set null');   // Si se borra el equipo, se pone NULL
             $table->timestamps();
         });
     }

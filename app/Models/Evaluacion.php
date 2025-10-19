@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
  * 
  * @property int $id
  * @property float|null $nota
- * @property string|null $descripción
+ * @property string|null $descripcion
  * @property string $estado
  * @property bool $respeto
  * @property bool $integridad

@@ -3,14 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ImportCompetidoresRequest;
-use App\Services\ListaCompetidoresService;
+use App\Services\ImportacionesService;
+
 use Illuminate\Http\Request;
 
 class ImportacionesController extends Controller
 {
     protected $competidoresService;
 
-    public function __construct(ListaCompetidoresService $competidoresService)
+    public function __construct(ImportacionesService $competidoresService)
     {
         $this->competidoresService = $competidoresService;
     }

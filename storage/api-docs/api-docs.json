@@ -1,0 +1,512 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "API Olimpiadas",
+        "description": "Documentación de la API para evaluaciones y evaluadores",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://my-default-host.com",
+            "description": "Servidor local"
+        }
+    ],
+    "paths": {
+        "/api/fases": {
+            "get": {
+                "tags": [
+                    "Fases"
+                ],
+                "summary": "Listar todas las fases",
+                "operationId": "72d4c98364be72fd0c6e605d4ff7de2a",
+                "responses": {
+                    "200": {
+                        "description": "Lista de fases obtenida exitosamente"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Fases"
+                ],
+                "summary": "Registrar una nueva fase",
+                "operationId": "50ac039336e75a62851c4024b38cb9e8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nombre",
+                                    "estado",
+                                    "fecha_inicio",
+                                    "fecha_fin"
+                                ],
+                                "properties": {
+                                    "nombre": {
+                                        "type": "string",
+                                        "example": "Fase Eliminatoria"
+                                    },
+                                    "descripcion": {
+                                        "type": "string",
+                                        "example": "Primera ronda de evaluaciones"
+                                    },
+                                    "estado": {
+                                        "type": "string",
+                                        "example": "abierto"
+                                    },
+                                    "fecha_inicio": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-10-01"
+                                    },
+                                    "fecha_fin": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-10-15"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Fase creada correctamente"
+                    },
+                    "422": {
+                        "description": "Error de validación en los datos enviados"
+                    }
+                }
+            }
+        },
+        "/api/fases/{id}": {
+            "delete": {
+                "tags": [
+                    "Fases"
+                ],
+                "summary": "Eliminar una fase existente",
+                "operationId": "795f170a1cc69cf038b0a369bceb7b91",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de la fase a eliminar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 5
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fase eliminada correctamente"
+                    },
+                    "404": {
+                        "description": "Fase no encontrada"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Fases"
+                ],
+                "summary": "Actualizar parcialmente una fase",
+                "operationId": "3d00cf2cd32bf1baf4b26486e1382553",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de la fase a actualizar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 3
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nombre": {
+                                        "type": "string",
+                                        "example": "Fase Final"
+                                    },
+                                    "descripcion": {
+                                        "type": "string",
+                                        "example": "Última etapa de la competencia"
+                                    },
+                                    "estado": {
+                                        "type": "string",
+                                        "example": "cerrado"
+                                    },
+                                    "fecha_inicio": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-10-20"
+                                    },
+                                    "fecha_fin": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-10-30"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Fase actualizada correctamente"
+                    },
+                    "404": {
+                        "description": "Fase no encontrada"
+                    }
+                }
+            }
+        },
+        "/api/evaluador/evaluaciones": {
+            "get": {
+                "tags": [
+                    "Evaluador"
+                ],
+                "summary": "Obtener evaluaciones de un evaluador",
+                "operationId": "8f435d68e9ce74ef83514f415694e64c",
+                "parameters": [
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "description": "Cantidad de resultados por página",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número de página",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "busqueda",
+                        "in": "query",
+                        "description": "Filtrar evaluaciones por nombre o CI",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Evaluaciones obtenidas correctamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id_evaluacion": {
+                                                        "type": "integer"
+                                                    },
+                                                    "id_inscrito": {
+                                                        "type": "integer"
+                                                    },
+                                                    "ci": {
+                                                        "type": "string"
+                                                    },
+                                                    "nombre": {
+                                                        "type": "string"
+                                                    },
+                                                    "area": {
+                                                        "type": "string"
+                                                    },
+                                                    "nivel": {
+                                                        "type": "string"
+                                                    },
+                                                    "nota": {
+                                                        "type": "number",
+                                                        "nullable": true
+                                                    },
+                                                    "conducta": {
+                                                        "properties": {
+                                                            "respeto": {
+                                                                "type": "boolean",
+                                                                "example": true
+                                                            },
+                                                            "integridad": {
+                                                                "type": "boolean",
+                                                                "example": true
+                                                            },
+                                                            "puntualidad": {
+                                                                "type": "boolean",
+                                                                "example": false
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    },
+                                                    "descripcion": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "estado": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "meta": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "next_page_url": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "prev_page_url": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No se encontraron evaluaciones"
+                    },
+                    "500": {
+                        "description": "Error del servidor"
+                    }
+                }
+            }
+        },
+        "/api/evaluadores/evaluaciones/{id}": {
+            "put": {
+                "tags": [
+                    "Evaluador"
+                ],
+                "summary": "Actualiza una evaluación existente",
+                "description": "Permite actualizar la nota, descripción y los aspectos de conducta de una evaluación. Solo se envían los campos que se desean actualizar.",
+                "operationId": "updateEvaluacion",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de la evaluación a actualizar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nota": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 85
+                                    },
+                                    "descripcion": {
+                                        "type": "string",
+                                        "example": "Buen desempeño general"
+                                    },
+                                    "conducta": {
+                                        "properties": {
+                                            "respeto": {
+                                                "type": "boolean",
+                                                "example": true
+                                            },
+                                            "integridad": {
+                                                "type": "boolean",
+                                                "example": true
+                                            },
+                                            "puntualidad": {
+                                                "type": "boolean",
+                                                "example": false
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Evaluación actualizada correctamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "nota": {
+                                                        "type": "number",
+                                                        "format": "float",
+                                                        "example": 85
+                                                    },
+                                                    "descripcion": {
+                                                        "type": "string",
+                                                        "example": "Buen desempeño general"
+                                                    },
+                                                    "conducta": {
+                                                        "properties": {
+                                                            "respeto": {
+                                                                "type": "boolean",
+                                                                "example": true
+                                                            },
+                                                            "integridad": {
+                                                                "type": "boolean",
+                                                                "example": true
+                                                            },
+                                                            "puntualidad": {
+                                                                "type": "boolean",
+                                                                "example": false
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    },
+                                                    "estado_clasificacion": {
+                                                        "type": "string",
+                                                        "example": "clasificado"
+                                                    },
+                                                    "id_inscripcion": {
+                                                        "type": "integer",
+                                                        "example": 3
+                                                    },
+                                                    "id_fase": {
+                                                        "type": "integer",
+                                                        "example": 3
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2025-10-18T11:00:00Z"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2025-10-18T11:00:00Z"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Evaluación no encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No se encontró la evaluación."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Error del servidor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "ServerError"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Fases",
+            "description": "Gestión de las fases del proceso de evaluación"
+        },
+        {
+            "name": "Evaluador",
+            "description": "Operaciones relacionadas con evaluadores"
+        }
+    ]
+}

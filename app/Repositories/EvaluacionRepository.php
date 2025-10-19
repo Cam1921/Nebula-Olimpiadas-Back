@@ -5,90 +5,93 @@ namespace App\Repositories;
 use App\Models\Evaluacion;
 use App\Traits\NormalizeStringTrait;
 use DB;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class EvaluacionRepository
 {
+    use NormalizeStringTrait;
 
-    /**
-     * Obtiene todas las evaluaciones asignadas a un evaluador.
-     *
-     * @param int $idEvaluador
-     * @return \Illuminate\Support\Collection
-     */
+    public function obtenerEvaluacionesPorEvaluador(
+        int $idEvaluador,
+        ?string $busqueda = null,
+        int $perPage = 10,
+        int $page = 1,
+        ?string $estado_clasificado = null
+    ): LengthAwarePaginator {
 
-
-    public function obtenerEvaluacionesPorEvaluador($idEvaluador)
-    {
-        /* return DB::table('evaluacion as eva')
-            ->join('inscripcion as ins', 'ins.id', '=', 'eva.id_inscripcion')
-            ->join('competidor as co', 'co.id', '=', 'ins.id_competidor')
-            ->join('area_nivel as an', 'an.id', '=', 'ins.id_area_nivel')
-            ->join('area as ar', 'ar.id', '=', 'an.id_area')
-            ->join('nivel as nv', 'nv.id', '=', 'an.id_nivel')
-            ->join('asignacion as asig', 'asig.id_area_nivel', '=', 'an.id')
-            ->join('persona as pe', 'pe.id', '=', 'asig.id_persona')
-            ->join('persona_rol as rp', 'rp.id_persona', '=', 'pe.id')
-            ->join('rol as r', 'r.id', '=', 'rp.id_rol')
-            ->where('pe.id', $idEvaluador)
-            ->where('r.nombre', 'evaluador')
-            ->select(
-                'ins.id as id_inscrito',
-                'eva.id as id_evaluacion',
-                'co.ci as CI',
-                'co.nombres as Nombre',
-                'ar.nombre_area as Area',
-                'nv.nombre_nivel as Nivel',
-                'eva.nota as Nota',
-                'eva.respeto as Respeto',
-                'eva.integridad as Integridad',
-                'eva.puntualidad as Puntualidad',
-                'eva.descripcion as Descripcion',
-                'eva.estado as Estado'
-            )
-            ->get(); */
-        $evaluaciones = Evaluacion::with([
-            'inscripcion.competidor',
-            'inscripcion.area_nivel.area',
-            'inscripcion.area_nivel.nivel',
-            'inscripcion.area_nivel.asignacions.persona.rols'
-        ])
-            ->whereHas('inscripcion.area_nivel.asignacions.persona.rols', function ($query) {
-                $query->where('nombre', 'evaluador');
-            })
-            ->whereHas('inscripcion.area_nivel.asignacions', function ($query) use ($idEvaluador) {
-                $query->where('id_persona', $idEvaluador);
-            })
-            ->get();
-
-        $evaluaciones = Evaluacion::with([
+        $query = Evaluacion::with([
             'inscripcion.competidor',
             'inscripcion.area_nivel.area',
             'inscripcion.area_nivel.nivel'
         ])
-            ->whereHas('inscripcion.area_nivel.asignacions.persona.rols', function ($query) {
-                $query->where('nombre', 'evaluador');
+
+            ->whereHas('inscripcion.area_nivel.asignacions.persona.rols', function ($q) {
+                $q->where('nombre', 'evaluador');
             })
-            ->whereHas('inscripcion.area_nivel.asignacions', function ($query) use ($idEvaluador) {
-                $query->where('id_persona', $idEvaluador);
-            })
-            ->get()
-            ->map(function ($eva) {
-                return [
-                    'id_inscrito' => $eva->inscripcion->id,
-                    'id_evaluacion' => $eva->id,
-                    'CI' => $eva->inscripcion->competidor->ci,
-                    'Nombre' => $eva->inscripcion->competidor->nombres,
-                    'Area' => $eva->inscripcion->area_nivel->area->nombre_area,
-                    'Nivel' => $eva->inscripcion->area_nivel->nivel->nombre_nivel,
-                    'Nota' => $eva->nota,
-                    'Respeto' => $eva->respeto,
-                    'Integridad' => $eva->integridad,
-                    'Puntualidad' => $eva->puntualidad,
-                    'Descripcion' => $eva->descripcion,
-                    'Estado' => $eva->estado,
-                ];
+
+            ->whereHas('inscripcion.area_nivel.asignacions', function ($q) use ($idEvaluador) {
+                $q->where('id_persona', $idEvaluador);
             });
 
-        return $evaluaciones;
+
+        if ($busqueda) {
+            $query->whereHas('inscripcion.competidor', function ($q) use ($busqueda) {
+                $q->where('nombres', 'ILIKE', "%{$busqueda}%")
+                    ->orWhere('apellidos', 'ILIKE', "%{$busqueda}%")
+                    ->orWhere('ci', 'ILIKE', "%{$busqueda}%");
+            })
+                ->orWhereHas('inscripcion.area_nivel.area', function ($q) use ($busqueda) {
+                    $q->where('nombre_area', 'ILIKE', "%{$busqueda}%");
+                });
+        }
+        if ($estado_clasificado) {
+            switch ($estado_clasificado) {
+                case 'clasificados':
+                    $query->whereNotNull('nota') // solo evaluados
+                        ->where('nota', '>=', 51)
+                        ->where('respeto', true)
+                        ->where('integridad', true)
+                        ->where('puntualidad', true);
+                    break;
+
+                case 'no_clasificados':
+                    $query->whereNotNull('nota')
+                        ->where('nota', '<', 51)
+                        ->where('respeto', true)
+                        ->where('integridad', true)
+                        ->where('puntualidad', true);
+                    break;
+
+                case 'descalificados':
+                    $query->whereNotNull('nota')
+                        ->where(function ($q) {
+                            $q->where('respeto', false)
+                                ->orWhere('integridad', false)
+                                ->orWhere('puntualidad', false);
+                        });
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        $query->orderBy('id', 'asc');
+
+
+        return $query->paginate($perPage, ['*'], 'page', $page);
+
+
     }
+
+
+    public function update(Evaluacion $evaluacion, array $data)
+    {
+        return tap($evaluacion)->update($data);
+    }
+    public function findById($id)
+    {
+        return Evaluacion::findOrFail($id);
+    }
+
 }

@@ -23,12 +23,14 @@ class ListarCompetidoresService
                 'area.nombre_area as area',
                 'nivel.nombre_nivel as nivel',
                 'tutor_legal.telefono as contacto_tutor_legal',
-                'tutor_academico.telefono as contacto_tutor_academico'
+                'tutor_academico.telefono as contacto_tutor_academico',
+                'equipo.nombre_equipo as equipo',
             ])
             ->join('inscripcion', 'inscripcion.id_competidor', '=', 'competidor.id')
             ->join('area_nivel', 'area_nivel.id', '=', 'inscripcion.id_area_nivel')
             ->join('area', 'area.id', '=', 'area_nivel.id_area')
             ->join('nivel', 'nivel.id', '=', 'area_nivel.id_nivel')
+            ->leftJoin('equipo', 'equipo.id', '=', 'competidor.id_equipo')
             ->leftJoin('institucion', 'institucion.id', '=', 'competidor.id_institucion')
             ->leftJoin('grado', 'grado.id', '=', 'competidor.id_grado')
             ->leftJoin('tutor as tutor_legal', 'tutor_legal.id', '=', 'competidor.id_tutor_legal')

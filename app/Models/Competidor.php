@@ -37,7 +37,8 @@ class Competidor extends Model
 	protected $casts = [
 		'id_grado' => 'int',
 		'id_institucion' => 'int',
-		'id_tutor_legal' => 'int'
+		'id_tutor_legal' => 'int',
+		'id_equipo' => 'int',
 	];
 
 	protected $fillable = [
@@ -46,7 +47,8 @@ class Competidor extends Model
 		'ci',
 		'id_grado',
 		'id_institucion',
-		'id_tutor_legal'
+		'id_tutor_legal',
+		'id_equipo',
 	];
 
 	public function grado()
@@ -63,7 +65,10 @@ class Competidor extends Model
 	{
 		return $this->belongsTo(Tutor::class, 'id_tutor_legal');
 	}
-
+	public function equipo()
+	{
+		return $this->belongsTo(Equipo::class, 'id_equipo'); // 👈 relación opcional
+	}
 	public function inscripcions()
 	{
 		return $this->hasMany(Inscripcion::class, 'id_competidor');

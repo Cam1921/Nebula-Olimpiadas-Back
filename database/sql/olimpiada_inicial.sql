@@ -11,18 +11,18 @@ VALUES
 INSERT INTO grado
     (nombre_grado, created_at, updated_at)
 VALUES
-    ('Primero de primaria', NOW(), NOW()),
-    ('Segundo de primaria', NOW(), NOW()),
-    ('Tercero de primaria', NOW(), NOW()),
-    ('Cuarto de primaria', NOW(), NOW()),
-    ('Quinto de primaria', NOW(), NOW()),
-    ('Sexto de primaria', NOW(), NOW()),
-    ('Primero de secundaria', NOW(), NOW()),
-    ('Segundo de secundaria', NOW(), NOW()),
-    ('Tercero de secundaria', NOW(), NOW()),
-    ('Cuarto de secundaria', NOW(), NOW()),
-    ('Quinto de secundaria', NOW(), NOW()),
-    ('Sexto de secundaria', NOW(), NOW());
+    ('1ro Primaria', NOW(), NOW()),
+    ('2ro Primaria', NOW(), NOW()),
+    ('3ro Primaria', NOW(), NOW()),
+    ('4to Primaria', NOW(), NOW()),
+    ('5to Primaria', NOW(), NOW()),
+    ('6to Primaria', NOW(), NOW()),
+    ('1ro Secundaria', NOW(), NOW()),
+    ('2do Secundaria', NOW(), NOW()),
+    ('3ro Secundaria', NOW(), NOW()),
+    ('4to Secundaria', NOW(), NOW()),
+    ('5to Secundaria', NOW(), NOW()),
+    ('6to Secundaria', NOW(), NOW());
 
 INSERT INTO area
     (nombre_area, created_at, updated_at)
@@ -31,7 +31,8 @@ VALUES
     ('Astrofisica', NOW(), NOW()),
     ('Biologia', NOW(), NOW()),
     ('Matematicas', NOW(), NOW()),
-    ('Quimica', NOW(), NOW());
+    ('Quimica', NOW(), NOW()),
+    ('Robotica', NOW(), NOW());
 
 INSERT INTO nivel
     (nombre_nivel, created_at, updated_at)
@@ -43,16 +44,20 @@ VALUES
     ('Segundo nivel', NOW(), NOW()),
     ('Tercer nivel', NOW(), NOW()),
     ('Cuarto nivel', NOW(), NOW()),
-    ('Tercero de primaria', NOW(), NOW()),
-    ('Cuarto de primaria', NOW(), NOW()),
-    ('Quinto de primaria', NOW(), NOW()),
-    ('Sexto de primaria', NOW(), NOW()),
-    ('Primero de secundaria', NOW(), NOW()),
-    ('Segundo de secundaria', NOW(), NOW()),
-    ('Tercero de secundaria', NOW(), NOW()),
-    ('Cuarto de secundaria', NOW(), NOW()),
-    ('Quinto de secundaria', NOW(), NOW()),
-    ('Sexto de secundaria', NOW(), NOW());
+    ('3P', NOW(), NOW()),
+    ('4P', NOW(), NOW()),
+    ('5P', NOW(), NOW()),
+    ('6P', NOW(), NOW()),
+    ('1S', NOW(), NOW()),
+    ('2S', NOW(), NOW()),
+    ('3S', NOW(), NOW()),
+    ('4S', NOW(), NOW()),
+    ('5S', NOW(), NOW()),
+    ('6S', NOW(), NOW()),
+    ('Builders S', NOW(), NOW()),
+    ('Lego P', NOW(), NOW()),
+    ('Lego S', NOW(), NOW()),
+    ('Builders P', NOW(), NOW());
 
 
 
@@ -61,11 +66,17 @@ INSERT INTO nivel_grado
     (id_grado, id_nivel, id_olimpiada, created_at, updated_at)
 SELECT g.id, n.id, 1, NOW(), NOW()
 FROM grado g
-    JOIN nivel n ON g.nombre_grado = n.nombre_nivel
-WHERE g.nombre_grado IN (
-    'Tercero de primaria','Cuarto de primaria','Quinto de primaria','Sexto de primaria',
-    'Primero de secundaria','Segundo de secundaria','Tercero de secundaria',
-    'Cuarto de secundaria','Quinto de secundaria','Sexto de secundaria'
+    JOIN nivel n ON (
+    (g.nombre_grado = '3ro Primaria' AND n.nombre_nivel = '3P') OR
+        (g.nombre_grado = '4to Primaria' AND n.nombre_nivel = '4P') OR
+        (g.nombre_grado = '5to Primaria' AND n.nombre_nivel = '5P') OR
+        (g.nombre_grado = '6to Primaria' AND n.nombre_nivel = '6P') OR
+        (g.nombre_grado = '1ro Secundaria' AND n.nombre_nivel = '1S') OR
+        (g.nombre_grado = '2do Secundaria' AND n.nombre_nivel = '2S') OR
+        (g.nombre_grado = '3ro Secundaria' AND n.nombre_nivel = '3S') OR
+        (g.nombre_grado = '4to Secundaria' AND n.nombre_nivel = '4S') OR
+        (g.nombre_grado = '5to Secundaria' AND n.nombre_nivel = '5S') OR
+        (g.nombre_grado = '6to Secundaria' AND n.nombre_nivel = '6S')
 );
 
 -----Informatica------------------------------
@@ -75,23 +86,23 @@ INSERT INTO nivel_grado
 SELECT g.id, n.id, 1, NOW(), NOW()
 FROM grado g
     JOIN nivel n ON n.nombre_nivel = 'Guacamayo'
-WHERE g.nombre_grado IN ('Quinto de primaria','Sexto de primaria');
+WHERE g.nombre_grado IN ('5to Primaria','6to Primaria');
 
--- Bufeo (Primero a Tercero de secundaria)
+-- Bufeo (Primero a 3ro Secundaria)
 INSERT INTO nivel_grado
     (id_grado, id_nivel, id_olimpiada, created_at, updated_at)
 SELECT g.id, n.id, 1, NOW(), NOW()
 FROM grado g
     JOIN nivel n ON n.nombre_nivel = 'Bufeo'
-WHERE g.nombre_grado IN ('Primero de secundaria','Segundo de secundaria','Tercero de secundaria');
+WHERE g.nombre_grado IN ('1ro Secundaria','2do Secundaria','3ro Secundaria');
 
--- Puma (Cuarto a Sexto de secundaria)
+-- Puma (Cuarto a 6to Secundaria)
 INSERT INTO nivel_grado
     (id_grado, id_nivel, id_olimpiada, created_at, updated_at)
 SELECT g.id, n.id, 1, NOW(), NOW()
 FROM grado g
     JOIN nivel n ON n.nombre_nivel = 'Puma'
-WHERE g.nombre_grado IN ('Cuarto de secundaria','Quinto de secundaria','Sexto de secundaria');
+WHERE g.nombre_grado IN ('4to Secundaria','5to Secundaria','6to Secundaria');
 
 --Matematicas---------------------------------------------------
 
@@ -100,31 +111,62 @@ INSERT INTO nivel_grado
 SELECT g.id, n.id, 1, NOW(), NOW()
 FROM grado g
     JOIN nivel n ON n.nombre_nivel = 'Primer nivel'
-WHERE g.nombre_grado IN ('Primero de secundaria','Segundo de secundaria');
+WHERE g.nombre_grado IN ('1ro Secundaria','2do Secundaria');
 
--- Segundo nivel (Tercero y Cuarto de secundaria)
+-- Segundo nivel (Tercero y 4to Secundaria)
 INSERT INTO nivel_grado
     (id_grado, id_nivel, id_olimpiada, created_at, updated_at)
 SELECT g.id, n.id, 1, NOW(), NOW()
 FROM grado g
     JOIN nivel n ON n.nombre_nivel = 'Segundo nivel'
-WHERE g.nombre_grado IN ('Tercero de secundaria','Cuarto de secundaria');
+WHERE g.nombre_grado IN ('3ro Secundaria','4to Secundaria');
 
--- Tercer nivel (Quinto de secundaria)
+-- Tercer nivel (5to Secundaria)
 INSERT INTO nivel_grado
     (id_grado, id_nivel, id_olimpiada, created_at, updated_at)
 SELECT g.id, n.id, 1, NOW(), NOW()
 FROM grado g
     JOIN nivel n ON n.nombre_nivel = 'Tercer nivel'
-WHERE g.nombre_grado = 'Quinto de secundaria';
+WHERE g.nombre_grado = '5to Secundaria';
 
--- Cuarto nivel (Sexto de secundaria)
+-- Cuarto nivel (6to Secundaria)
 INSERT INTO nivel_grado
     (id_grado, id_nivel, id_olimpiada, created_at, updated_at)
 SELECT g.id, n.id, 1, NOW(), NOW()
 FROM grado g
     JOIN nivel n ON n.nombre_nivel = 'Cuarto nivel'
-WHERE g.nombre_grado = 'Sexto de secundaria';
+WHERE g.nombre_grado = '6to Secundaria';
+
+INSERT INTO nivel_grado
+    (id_grado, id_nivel, id_olimpiada, created_at, updated_at)
+SELECT g.id, n.id, 1, NOW(), NOW()
+FROM grado g
+    JOIN nivel n ON n.nombre_nivel = 'Builders P'
+WHERE g.nombre_grado IN ('5to Primaria','6to Primaria');
+
+INSERT INTO nivel_grado
+    (id_grado, id_nivel, id_olimpiada, created_at, updated_at)
+SELECT g.id, n.id, 1, NOW(), NOW()
+FROM grado g
+    JOIN nivel n ON n.nombre_nivel = 'Builders S'
+WHERE g.nombre_grado IN ('1ro Secundaria','2do Secundaria','3ro Secundaria',
+    '4to Secundaria','5to Secundaria','6to Secundaria');
+
+
+INSERT INTO nivel_grado
+    (id_grado, id_nivel, id_olimpiada, created_at, updated_at)
+SELECT g.id, n.id, 1, NOW(), NOW()
+FROM grado g
+    JOIN nivel n ON n.nombre_nivel = 'Lego P'
+WHERE g.nombre_grado IN ('5to Primaria','6to Primaria');
+
+INSERT INTO nivel_grado
+    (id_grado, id_nivel, id_olimpiada, created_at, updated_at)
+SELECT g.id, n.id, 1, NOW(), NOW()
+FROM grado g
+    JOIN nivel n ON n.nombre_nivel = 'Lego S'
+WHERE g.nombre_grado IN ('1ro Secundaria','2do Secundaria','3ro Secundaria',
+    '4to Secundaria','5to Secundaria','6to Secundaria');
 
 ---Vinculación por area--------------------
 INSERT INTO area_nivel
@@ -132,9 +174,9 @@ INSERT INTO area_nivel
 SELECT a.id, n.id, 1, NOW(), NOW()
 FROM area a
     JOIN nivel n ON n.nombre_nivel IN (
-    'Tercero de primaria','Cuarto de primaria','Quinto de primaria','Sexto de primaria',
-    'Primero de secundaria','Segundo de secundaria','Tercero de secundaria',
-    'Cuarto de secundaria','Quinto de secundaria','Sexto de secundaria'
+    '3P','4P','5P','6P',
+    '1S','2S','3S',
+    '4S','5S','6S'
 )
 WHERE a.nombre_area = 'Astrofisica';
 
@@ -143,8 +185,8 @@ INSERT INTO area_nivel
 SELECT a.id, n.id, 1, NOW(), NOW()
 FROM area a
     JOIN nivel n ON n.nombre_nivel IN (
-    'Segundo de secundaria','Tercero de secundaria','Cuarto de secundaria',
-    'Quinto de secundaria','Sexto de secundaria'
+    '2S','3S','4S',
+    '5S','6S'
 )
 WHERE a.nombre_area = 'Quimica';
 
@@ -153,7 +195,7 @@ INSERT INTO area_nivel
 SELECT a.id, n.id, 1, NOW(), NOW()
 FROM area a
     JOIN nivel n
-    ON n.nombre_nivel IN ('Segundo de secundaria','Tercero de secundaria','Cuarto de secundaria','Quinto de secundaria','Sexto de secundaria')
+    ON n.nombre_nivel IN ('2S','3S','4S','5S','6S')
 WHERE a.nombre_area = 'Biologia';
 
 INSERT INTO area_nivel
@@ -181,6 +223,27 @@ CREATE TABLE competidor_auditoria
     datos JSONB,
     created_at TIMESTAMP DEFAULT now()
 );
+
+INSERT INTO area_nivel
+    (id_area, id_nivel, id_olimpiada, created_at, updated_at)
+SELECT a.id, n.id, 1, NOW(), NOW()
+FROM area a
+    JOIN nivel n ON n.nombre_nivel IN (
+    'Builders P','Builders S','Lego P',
+    'Lego S'
+)
+WHERE a.nombre_area = 'Robotica';
+
+CREATE TABLE evaluacion_auditoria
+(
+    id BIGSERIAL PRIMARY KEY,
+    id_evaluacion BIGINT NOT NULL,
+    evaluador_id BIGINT NOT NULL,
+    cambios JSONB NOT NULL,
+    ip VARCHAR(45) NULL,
+    created_at TIMESTAMP DEFAULT now()
+);
+
 
 CREATE OR REPLACE FUNCTION fn_log_competidor
 () RETURNS TRIGGER AS $$
@@ -212,3 +275,52 @@ UPDATE OR DELETE ON competidor
 FOR EACH ROW
 EXECUTE FUNCTION fn_log_competidor
 ();
+
+
+
+ALTER TABLE evaluacion 
+ADD CONSTRAINT unique_inscripcion_fase 
+UNIQUE (id_inscripcion, id_fase);
+ALTER TABLE evaluacion 
+ADD CONSTRAINT unique_inscripcion_fase UNIQUE (id_inscripcion, id_fase);
+
+CREATE OR REPLACE FUNCTION fn_migrar_inscritos_a_evaluaciones
+()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- 🧩 Verificar si el estado de la fase cambió a 'abierta'
+    IF NEW.estado = 'abierta' AND OLD.estado <> 'abierta' THEN
+
+    /*----------------------------------------------------------
+          Inserta en la tabla 'evaluacion' una fila por cada inscripción
+          activa, vinculando la inscripción (i.id) con la fase abierta (NEW.id).
+          Se incluyen timestamps para auditoría.
+        ----------------------------------------------------------*/
+    INSERT INTO evaluacion
+        (id_inscripcion, id_fase, created_at, updated_at)
+    SELECT i.id, NEW.id, NOW(), NOW()
+    FROM inscripcion i
+    WHERE NOT EXISTS (
+            SELECT 1
+    FROM evaluacion e
+    WHERE e.id_inscripcion = i.id
+        AND e.id_fase = NEW.id
+        );
+END
+IF;
+
+    -- Retornar el nuevo registro de la fase para completar el trigger
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trg_migrar_inscritos
+AFTER
+UPDATE ON fase
+FOR EACH ROW
+EXECUTE FUNCTION fn_migrar_inscritos_a_evaluaciones
+();
+
+CREATE EXTENSION
+IF NOT EXISTS unaccent;
