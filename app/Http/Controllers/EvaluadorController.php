@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreEvaluadorRequest;
 use App\Models\AreaNivel;
 use App\Models\Persona;
 use App\Models\Asignacion;
@@ -49,55 +50,35 @@ class EvaluadorController extends Controller
     /**
      * Crear nuevo evaluador
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreEvaluadorRequest $request): JsonResponse
     {
-        try {
-            // ✅ VALIDACIÓN DE CAMPOS
-            $request->validate([
-                'nombre' => 'required|string|min:2',
-                'apellidos' => 'required|string|min:2',
-                'ci' => 'required|numeric|unique:persona,ci',
-                'telefono' => 'required|string|size:8|regex:/^[67]\d{7}$/|unique:persona,telefono',
-                'email' => 'required|email|unique:users,email',
-                'asignaciones' => 'required|array|min:1',
-                'asignaciones.*.id_area' => 'required|integer|exists:area,id',
-                'asignaciones.*.id_nivel' => 'nullable|integer|exists:nivel,id',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // ❌ SI FALLA LA VALIDACIÓN
-            return response()->json([
-                'message' => 'Error de validación',
-                'errors' => $e->errors(),
-            ], 422);
-        }
+        $datos = $request->validated(); // ✅ Guardamos los datos validados en un array
 
-        return DB::transaction(function () use ($request) {
+        return DB::transaction(function () use ($datos) {
             $rolEvaluador = Rol::where('nombre', 'evaluador')->firstOrFail();
 
+            // Crear usuario
             $user = User::create([
-                'name' => "{$request->nombre} {$request->apellidos}",
-                'email' => $request->email,
-                'password' => Hash::make($request->ci),
-
+                'name' => "{$datos['nombre']} {$datos['apellidos']}",
+                'email' => $datos['email'],
+                'password' => Hash::make($datos['ci']),
             ]);
+
             // Crear persona
             $persona = Persona::create([
-                'nombres' => $request->nombre,
-                'apellidos' => $request->apellidos,
-                'ci' => $request->ci,
-                'telefono' => $request->telefono,
-                'email' => $request->email,
+                'nombres' => $datos['nombre'],
+                'apellidos' => $datos['apellidos'],
+                'ci' => $datos['ci'],
+                'telefono' => $datos['telefono'],
+                'email' => $datos['email'],
                 'id_usuario' => $user->id,
             ]);
 
+            // Asignar rol de evaluador
             $persona->rols()->attach($rolEvaluador->id);
 
-            // Crear usuario (contraseña = CI)
-
-
-            // Validar duplicados de asignación
-            foreach ($request->asignaciones as $a) {
-                // Buscar el área_nivel correspondiente
+            // Crear asignaciones
+            foreach ($datos['asignaciones'] as $a) {
                 $areaNivel = AreaNivel::where('id_area', $a['id_area'])
                     ->where('id_nivel', $a['id_nivel'])
                     ->first();
@@ -111,7 +92,6 @@ class EvaluadorController extends Controller
                     ], 422);
                 }
 
-                // Verificar si ya hay un evaluador asignado a ese área_nivel
                 $exists = Asignacion::where('id_area_nivel', $areaNivel->id)
                     ->whereHas('persona.rols', fn($q) => $q->where('nombre', 'evaluador'))
                     ->exists();
@@ -125,7 +105,6 @@ class EvaluadorController extends Controller
                     ], 422);
                 }
 
-                // Crear la asignación nueva
                 Asignacion::create([
                     'id_persona' => $persona->id,
                     'id_area_nivel' => $areaNivel->id,
@@ -143,89 +122,103 @@ class EvaluadorController extends Controller
         });
     }
 
+
     /**
      * Actualizar datos de un evaluador
      */
     public function update(Request $request, $id): JsonResponse
     {
         $persona = Persona::with('user', 'rols')->findOrFail($id);
-
         try {
-            // ✅ VALIDACIÓN DE CAMPOS
-            $request->validate([
-                'nombre' => 'required|string|min:2',
-                'apellidos' => 'required|string|min:2',
-                'ci' => "required|numeric|unique:persona,ci,{$id}",
-                'telefono' => "required|string|size:8|regex:/^[67]\d{7}$/|unique:persona,telefono,{$id}",
-                'email' => "required|email|unique:users,email,{$persona->user->id}",
-                'asignaciones' => 'required|array|min:1',
-                'asignaciones.*.id_area' => 'required|integer|exists:area,id',
-                'asignaciones.*.id_nivel' => 'nullable|integer|exists:nivel,id',
+            // ✅ Laravel lanza automáticamente ValidationException si no cumple
+            $validated = $request->validate([
+                'nombre' => 'sometimes|string|min:2',
+                'apellidos' => 'sometimes|string|min:2',
+                'ci' => "sometimes|numeric|unique:persona,ci,{$id},id",
+                'telefono' => "sometimes|string|size:8|regex:/^[67]\d{7}$/|unique:persona,telefono,{$id},id",
+                'email' => "sometimes|email|unique:persona,email,{$id},id",
+                'asignaciones' => 'sometimes|array',
+                'asignaciones.*.id_area' => 'required_with:asignaciones|integer|exists:area,id',
+                'asignaciones.*.id_nivel' => 'required_with:asignaciones|integer|exists:nivel,id',
+            ], [
+                // 📋 Mensajes personalizados
+                'nombre.string' => 'El nombre debe ser un texto válido.',
+                'nombre.min' => 'El nombre debe tener al menos 2 caracteres.',
+
+                'apellidos.string' => 'Los apellidos deben ser un texto válido.',
+                'apellidos.min' => 'Los apellidos deben tener al menos 2 caracteres.',
+
+                'ci.numeric' => 'El CI debe ser un número.',
+                'ci.unique' => 'Este CI ya se encuentra registrado.',
+
+                'telefono.size' => 'El teléfono debe tener exactamente 8 dígitos.',
+                'telefono.regex' => 'El teléfono debe comenzar con 6 o 7 y contener 8 dígitos.',
+                'telefono.unique' => 'Este teléfono ya está registrado.',
+
+                'email.email' => 'Debe ingresar un correo electrónico válido.',
+                'email.unique' => 'Este correo electrónico ya está registrado.',
+
+                'asignaciones.array' => 'Las asignaciones deben enviarse en formato de arreglo.',
+
+                'asignaciones.*.id_area.required_with' => 'Debe indicar el área en cada asignación.',
+                'asignaciones.*.id_area.integer' => 'El ID del área debe ser un número válido.',
+                'asignaciones.*.id_area.exists' => 'El área seleccionada no existe.',
+
+                'asignaciones.*.id_nivel.required_with' => 'Debe indicar el nivel en cada asignación.',
+                'asignaciones.*.id_nivel.integer' => 'El ID del nivel debe ser un número válido.',
+                'asignaciones.*.id_nivel.exists' => 'El nivel seleccionado no existe.',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // ❌ SI FALLA LA VALIDACIÓN
             return response()->json([
                 'message' => 'Error de validación',
                 'errors' => $e->errors(),
             ], 422);
         }
-
         try {
-            // ✅ SI TODO ES VÁLIDO, INICIA TRANSACCIÓN
-            return DB::transaction(function () use ($request, $persona) {
+            return DB::transaction(function () use ($validated, $persona) {
 
                 // 1️⃣ Actualizar Persona
                 $persona->update([
-                    'nombres' => $request->nombre,
-                    'apellidos' => $request->apellidos,
-                    'ci' => $request->ci,
-                    'telefono' => $request->telefono,
-                    'email' => $request->email,
+                    'nombres' => $validated['nombre'] ?? $persona->nombres,
+                    'apellidos' => $validated['apellidos'] ?? $persona->apellidos,
+                    'ci' => $validated['ci'] ?? $persona->ci,
+                    'telefono' => $validated['telefono'] ?? $persona->telefono,
+                    'email' => $validated['email'] ?? $persona->email,
                 ]);
 
-                // 2️⃣ Actualizar Usuario
-                if ($persona->user) {
+                // 2️⃣ Actualizar Usuario (si existe)
+                if ($persona->user && isset($validated['email'])) {
                     $persona->user->update([
-                        'email' => $request->email,
-                        'password' => Hash::make($request->ci),
+                        'email' => $validated['email'],
+                        'password' => Hash::make($persona->ci),
                     ]);
                 }
 
-                // 3️⃣ Eliminar asignaciones previas
-                $persona->asignacions()->delete();
+                // 3️⃣ Actualizar asignaciones si fueron enviadas
+                if (isset($validated['asignaciones'])) {
+                    $persona->asignacions()->delete();
 
-                // 4️⃣ Crear nuevas asignaciones
-                foreach ($request->asignaciones as $a) {
-                    $areaNivel = AreaNivel::where('id_area', $a['id_area'])
-                        ->where('id_nivel', $a['id_nivel'])
-                        ->first();
+                    foreach ($validated['asignaciones'] as $a) {
+                        $areaNivel = AreaNivel::where('id_area', $a['id_area'])
+                            ->where('id_nivel', $a['id_nivel'])
+                            ->first();
 
-                    if (!$areaNivel) {
-                        return response()->json([
-                            'message' => 'Error: No se encontró una combinación válida de área y nivel.',
-                            'errors' => [
-                                'asignaciones' => ['Área o nivel no existen en la tabla area_nivel.']
-                            ]
-                        ], 422);
+                        if (!$areaNivel) {
+                            throw new \Exception('Área o nivel no existen en la tabla area_nivel.');
+                        }
+
+                        $exists = Asignacion::where('id_area_nivel', $areaNivel->id)
+                            ->whereHas('persona.rols', fn($q) => $q->where('nombre', 'evaluador'))
+                            ->exists();
+
+                        if ($exists) {
+                            throw new \Exception('Ya existe un evaluador asignado a esta área y nivel.');
+                        }
+
+                        $persona->asignacions()->create([
+                            'id_area_nivel' => $areaNivel->id,
+                        ]);
                     }
-
-                    // Verificar si ya hay un evaluador asignado a ese área_nivel
-                    $exists = Asignacion::where('id_area_nivel', $areaNivel->id)
-                        ->whereHas('persona.rols', fn($q) => $q->where('nombre', 'evaluador'))
-                        ->exists();
-
-                    if ($exists) {
-                        return response()->json([
-                            'message' => 'Error: Ya existe un evaluador asignado a esta área y nivel.',
-                            'errors' => [
-                                'asignaciones' => ['Duplicado de área y nivel.']
-                            ]
-                        ], 422);
-                    }
-
-                    $persona->asignacions()->create([
-                        'id_area_nivel' => $areaNivel->id,
-                    ]);
                 }
 
                 $persona->load(['user', 'asignacions.area_nivel.area', 'asignacions.area_nivel.nivel']);
@@ -235,13 +228,14 @@ class EvaluadorController extends Controller
                     'data' => $persona,
                 ]);
             });
-        } catch (\Exception $e) {
-            // ❌ ERRORES GENERALES (por ejemplo, asignación duplicada)
+        } catch (\Throwable $e) {
             return response()->json([
+                'message' => 'Error al actualizar evaluador.',
                 'error' => $e->getMessage(),
             ], 422);
         }
     }
+
 
 
 
@@ -272,6 +266,7 @@ class EvaluadorController extends Controller
     {
         $field = $request->query('field');
         $value = $request->query('value');
+        $excludeId = $request->query('excludeId'); // ← Nueva línea
 
         if (!in_array($field, ['ci', 'telefono', 'email'])) {
             return response()->json(['error' => 'Campo no permitido'], 400);

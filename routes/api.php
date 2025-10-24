@@ -68,8 +68,11 @@ Route::prefix('competidores')->middleware(['auth:sanctum', 'role:administrador']
 Route::prefix('evaluador')->middleware(['auth:sanctum', 'role:evaluador'])->group(function () {
     Route::get('/evaluaciones', [EvaluacionesController::class, 'index']);
     Route::put('/evaluaciones/{id}', [EvaluacionesController::class, 'update']);
-
+    Route::get('/evaluaciones/exportar', [EvaluacionesController::class, 'exportarExcel']);
 });
+
+
+
 
 
 

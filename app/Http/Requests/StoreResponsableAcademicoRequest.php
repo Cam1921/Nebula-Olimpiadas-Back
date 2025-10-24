@@ -18,10 +18,11 @@ class StoreResponsableAcademicoRequest extends FormRequest
         return [
             'nombre' => ['required', 'string', 'min:2', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/'],
             'apellidos' => ['required', 'string', 'min:2', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/'],
-            'correo' => ['required', 'email:rfc,dns', 'unique:responsable_academicos,correo'],
-            'telefono' => ['required', 'string', 'size:8', 'regex:/^[67]\d{7}$/', 'unique:responsable_academicos,telefono'],
-            'ci' => ['required', 'string', 'min:6', 'max:10', 'regex:/^\d{6,10}$/', 'unique:responsable_academicos,ci'],
-            'area' => ['required', 'string', 'max:255', 'unique:responsable_academicos,area'],
+            'email' => ['required', 'email:rfc,dns', 'max:70', 'unique:users,email'],
+            'telefono' => ['required', 'string', 'size:8', 'regex:/^[67]\d{7}$/', 'unique:persona,telefono'],
+            'ci' => ['required', 'string', 'min:6', 'max:10', 'regex:/^\d{6,10}$/', 'unique:persona,ci'],
+            'asignaciones' => ['required', 'array', 'min:1'],
+            'asignaciones.*.id_area' => ['required', 'integer', 'exists:area,id'],
         ];
     }
 
@@ -36,9 +37,10 @@ class StoreResponsableAcademicoRequest extends FormRequest
             'apellidos.min' => 'Los apellidos deben tener al menos 2 caracteres.',
             'apellidos.regex' => 'Los apellidos solo pueden contener letras y espacios.',
 
-            'correo.required' => 'El correo es obligatorio.',
-            'correo.email' => 'El correo debe tener un formato válido (ej. nombre@dominio.com).',
-            'correo.unique' => 'Ya existe un responsable con este correo.',
+            'email.required' => 'El correo es obligatorio.',
+            'email.email' => 'El correo debe tener un formato válido (ej. nombre@dominio.com).',
+            'email.unique' => 'Este correo ya está registrado.',
+            'email.max' => 'El correo no debe exceder los 70 caracteres.',
 
             'telefono.required' => 'El teléfono es obligatorio.',
             'telefono.size' => 'El teléfono debe tener exactamente 8 dígitos.',
@@ -51,8 +53,11 @@ class StoreResponsableAcademicoRequest extends FormRequest
             'ci.regex' => 'El CI debe contener solo dígitos y tener entre 6 y 10 caracteres.',
             'ci.unique' => 'Este CI ya está registrado.',
 
-            'area.required' => 'El área es obligatoria.',
-            'area.unique' => 'Ya existe un responsable asignado a esta área.',
+            'asignaciones.required' => 'Debes asignar al menos un área.',
+            'asignaciones.min' => 'Debes asignar al menos un área.',
+            'asignaciones.*.id_area.required' => 'Cada asignación debe tener un área.',
+            'asignaciones.*.id_area.integer' => 'El ID del área debe ser un número.',
+            'asignaciones.*.id_area.exists' => 'El área seleccionada no existe.',
         ];
     }
 

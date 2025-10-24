@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\EvaluacionesExport;
 use App\Services\EvaluacionesService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 /**
  * @OA\Tag(
@@ -265,5 +267,23 @@ class EvaluacionesController extends Controller
             );
         }
 
+    }
+    public function exportarExcel(Request $request)
+    {
+        try {
+            $idEvaluador = auth()->guard('sanctum')->user()->personas()->first()->id;
+            $busqueda = $request->query('busqueda', null);
+            $estado_clasificado = $request->query('estado_clasificado', null);
+
+            return Excel::download(
+                new EvaluacionesExport($idEvaluador, $busqueda, $estado_clasificado),
+                'competidores.xlsx',
+            );
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Error al generar Excel',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

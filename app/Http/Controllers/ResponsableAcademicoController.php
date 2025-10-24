@@ -2,11 +2,10 @@
 // app/Http/Controllers/ResponsableAcademicoController.php
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreResponsableAcademicoRequest;
 use App\Models\AreaNivel;
 use App\Models\Asignacion;
 use App\Models\Persona;
-use App\Models\ResponsableAcademico;
-use App\Http\Requests\StoreResponsableAcademicoRequest;
 use App\Models\Rol;
 use App\Models\User;
 use DB;
@@ -47,26 +46,10 @@ class ResponsableAcademicoController extends Controller
     /**
      * Crear nuevo evaluador
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreResponsableAcademicoRequest $request): JsonResponse
     {
-        try {
-            // ✅ VALIDACIÓN DE CAMPOS
-            $validated = $request->validate([
-                'nombre' => 'required|string|min:2',
-                'apellidos' => 'required|string|min:2',
-                'ci' => 'required|numeric|unique:persona,ci',
-                'telefono' => 'required|string|size:8|regex:/^[67]\d{7}$/|unique:persona,telefono',
-                'email' => 'required|email|unique:users,email',
-                'asignaciones' => 'required|array|min:1',
-                'asignaciones.*.id_area' => 'required|integer|exists:area,id',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // ❌ SI FALLA LA VALIDACIÓN
-            return response()->json([
-                'message' => 'Error de validación',
-                'errors' => $e->errors(),
-            ], 422);
-        }
+        // ✅ Los datos ya están validados
+        $validated = $request->validated();
 
         return DB::transaction(function () use ($validated) {
             try {
@@ -154,18 +137,33 @@ class ResponsableAcademicoController extends Controller
         $persona = Persona::with('user', 'rols')->findOrFail($id);
 
         try {
-            // ✅ VALIDACIÓN DE CAMPOS
             $request->validate([
-                'nombre' => 'required|string|min:2',
-                'apellidos' => 'required|string|min:2',
-                'ci' => "required|numeric|unique:persona,ci,{$id}",
-                'telefono' => "required|string|size:8|regex:/^[67]\d{7}$/|unique:persona,telefono,{$id}",
-                'email' => "required|email|unique:users,email,{$persona->user->id}",
-                'asignaciones' => 'required|array|min:1',
-                'asignaciones.*.id_area' => 'required|integer|exists:area,id',
+                'nombre' => 'sometimes|string|min:2',
+                'apellidos' => 'sometimes|string|min:2',
+                'ci' => "sometimes|numeric|unique:persona,ci,{$id},id",
+                'telefono' => "sometimes|string|size:8|regex:/^[67]\d{7}$/|unique:persona,telefono,{$id},id",
+                'email' => "sometimes|email|unique:persona,email,{$id},id",
+                'asignaciones' => 'sometimes|array|min:1',
+                'asignaciones.*.id_area' => 'sometimes|integer|exists:area,id',
+            ], [
+                // Mensajes personalizados
+                'nombre.string' => 'El nombre debe ser un texto válido.',
+                'nombre.min' => 'El nombre debe tener al menos 2 caracteres.',
+                'apellidos.string' => 'Los apellidos deben ser un texto válido.',
+                'apellidos.min' => 'Los apellidos deben tener al menos 2 caracteres.',
+                'ci.numeric' => 'El CI debe ser un número.',
+                'ci.unique' => 'Este CI ya está registrado.',
+                'telefono.size' => 'El teléfono debe tener exactamente 8 dígitos.',
+                'telefono.regex' => 'El teléfono debe empezar con 6 o 7 y contener 8 dígitos.',
+                'telefono.unique' => 'Este teléfono ya está registrado.',
+                'email.email' => 'Debe ingresar un correo válido.',
+                'email.unique' => 'Este correo ya está registrado.',
+                'asignaciones.array' => 'Las asignaciones deben enviarse en un arreglo.',
+                'asignaciones.min' => 'Debe asignar al menos un área.',
+                'asignaciones.*.id_area.integer' => 'El ID del área debe ser un número entero.',
+                'asignaciones.*.id_area.exists' => 'El área seleccionada no existe.',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // ❌ SI FALLA LA VALIDACIÓN
             return response()->json([
                 'message' => 'Error de validación',
                 'errors' => $e->errors(),
@@ -173,81 +171,91 @@ class ResponsableAcademicoController extends Controller
         }
 
         try {
-            // ✅ SI TODO ES VÁLIDO, INICIA TRANSACCIÓN
+            // ✅ TRANSACCIÓN SEGURA
             return DB::transaction(function () use ($request, $persona) {
 
-                // 1️⃣ Actualizar Persona
-                $persona->update([
-                    'nombres' => $request->nombre,
-                    'apellidos' => $request->apellidos,
-                    'ci' => $request->ci,
-                    'telefono' => $request->telefono,
-                    'email' => $request->email,
-                ]);
-
-                // 2️⃣ Actualizar Usuario
-                if ($persona->user) {
-                    $persona->user->update([
-                        'email' => $request->email,
-                        'password' => Hash::make($request->ci),
+                // 1️⃣ Actualizar solo los campos que vengan en el request
+                $data = $request->only(['nombre', 'apellidos', 'ci', 'telefono', 'email']);
+                if (!empty($data)) {
+                    $persona->update([
+                        'nombres' => $data['nombre'] ?? $persona->nombres,
+                        'apellidos' => $data['apellidos'] ?? $persona->apellidos,
+                        'ci' => $data['ci'] ?? $persona->ci,
+                        'telefono' => $data['telefono'] ?? $persona->telefono,
+                        'email' => $data['email'] ?? $persona->email,
                     ]);
                 }
 
-                // 3️⃣ Eliminar asignaciones previas
-                $persona->asignacions()->delete();
-
-                // 4️⃣ Crear nuevas asignaciones
-                foreach ($request->asignaciones as $a) {
-                    $areaNiveles = AreaNivel::where('id_area', $a['id_area'])->get();
-
-                    if ($areaNiveles->isEmpty()) {
-                        return response()->json([
-                            'message' => 'Error: No se encontraron niveles asociados a esta área.',
-                            'errors' => ['asignaciones' => ["Área {$a['id_area']} no tiene niveles asociados."]]
-                        ], 422);
+                // 2️⃣ Actualizar Usuario si se cambió el email o CI
+                if ($persona->user) {
+                    $userData = [];
+                    if ($request->filled('email')) {
+                        $userData['email'] = $request->email;
                     }
-
-                    foreach ($areaNiveles as $areaNivel) {
-
-                        $exists = Asignacion::where('id_area_nivel', $areaNivel->id)
-                            ->whereHas('persona.rols', fn($q) => $q->where('nombre', 'responsable'))
-                            ->where('id_persona', '!=', $persona->id)
-                            ->exists();
-                        // Verificar duplicados
-
-                        if ($exists) {
-                            return response()->json([
-                                'message' => 'Error: Ya existe un Responsable asignado a esta área',
-                                'errors' => [
-                                    'asignaciones' => [
-                                        "Área {$areaNivel->id_area}  ya tienen un Responsable asignado."
-                                    ]
-                                ]
-                            ], 422);
-                        }
-
-                        // Crear asignación
-                        Asignacion::create([
-                            'id_persona' => $persona->id,
-                            'id_area_nivel' => $areaNivel->id,
-                        ]);
+                    if ($request->filled('ci')) {
+                        $userData['password'] = Hash::make($request->ci);
+                    }
+                    if (!empty($userData)) {
+                        $persona->user->update($userData);
                     }
                 }
 
+                // 3️⃣ Actualizar asignaciones solo si se enviaron
+                if ($request->has('asignaciones')) {
+                    // Eliminar asignaciones previas
+                    $persona->asignacions()->delete();
+
+                    foreach ($request->asignaciones as $a) {
+                        $areaNiveles = AreaNivel::where('id_area', $a['id_area'])->get();
+
+                        if ($areaNiveles->isEmpty()) {
+                            return response()->json([
+                                'message' => 'Error: No se encontraron niveles asociados a esta área.',
+                                'errors' => ['asignaciones' => ["Área {$a['id_area']} no tiene niveles asociados."]]
+                            ], 422);
+                        }
+
+                        foreach ($areaNiveles as $areaNivel) {
+                            $exists = Asignacion::where('id_area_nivel', $areaNivel->id)
+                                ->whereHas('persona.rols', fn($q) => $q->where('nombre', 'responsable'))
+                                ->where('id_persona', '!=', $persona->id)
+                                ->exists();
+
+                            if ($exists) {
+                                return response()->json([
+                                    'message' => 'Error: Ya existe un Responsable asignado a esta área',
+                                    'errors' => [
+                                        'asignaciones' => [
+                                            "Área {$areaNivel->id_area} ya tiene un Responsable asignado."
+                                        ]
+                                    ]
+                                ], 422);
+                            }
+
+                            // Crear nueva asignación
+                            Asignacion::create([
+                                'id_persona' => $persona->id,
+                                'id_area_nivel' => $areaNivel->id,
+                            ]);
+                        }
+                    }
+                }
+
+                // Recargar relaciones
                 $persona->load(['user', 'asignacions.area_nivel.area', 'asignacions.area_nivel.nivel']);
 
                 return response()->json([
-                    'message' => 'responsable actualizado correctamente.',
+                    'message' => 'Responsable actualizado correctamente.',
                     'data' => $persona,
                 ]);
             });
         } catch (\Exception $e) {
-
             return response()->json([
                 'error' => $e->getMessage(),
             ], 422);
         }
     }
+
 
 
 
@@ -278,6 +286,7 @@ class ResponsableAcademicoController extends Controller
     {
         $field = $request->query('field');
         $value = $request->query('value');
+        $excludeId = $request->query('excludeId'); // ← Nueva línea
 
         if (!in_array($field, ['ci', 'telefono', 'email'])) {
             return response()->json(['error' => 'Campo no permitido'], 400);

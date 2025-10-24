@@ -246,27 +246,33 @@ CREATE TABLE evaluacion_auditoria
 
 
 CREATE OR REPLACE FUNCTION fn_log_competidor
-() RETURNS TRIGGER AS $$
+()
+RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
     INSERT INTO competidor_auditoria
         (competidor_id, accion, datos)
-    VALUES(NEW.id, TG_OP, row_to_json(NEW));
+    VALUES
+        (NEW.id, TG_OP, row_to_json(NEW));
     RETURN NEW;
     ELSIF TG_OP = 'UPDATE' THEN
     INSERT INTO competidor_auditoria
         (competidor_id, accion, datos)
-    VALUES(NEW.id, TG_OP, row_to_json(NEW));
+    VALUES
+        (NEW.id, TG_OP, row_to_json(NEW));
     RETURN NEW;
     ELSIF TG_OP = 'DELETE' THEN
     INSERT INTO competidor_auditoria
         (competidor_id, accion, datos)
-    VALUES(OLD.id, TG_OP, row_to_json(OLD));
+    VALUES
+        (OLD.id, TG_OP, row_to_json(OLD));
     RETURN OLD;
 END
 IF;
+    RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
+
 
 CREATE TRIGGER trg_competidor_auditoria
 AFTER
@@ -281,8 +287,7 @@ EXECUTE FUNCTION fn_log_competidor
 ALTER TABLE evaluacion 
 ADD CONSTRAINT unique_inscripcion_fase 
 UNIQUE (id_inscripcion, id_fase);
-ALTER TABLE evaluacion 
-ADD CONSTRAINT unique_inscripcion_fase UNIQUE (id_inscripcion, id_fase);
+
 
 CREATE OR REPLACE FUNCTION fn_migrar_inscritos_a_evaluaciones
 ()
@@ -324,3 +329,81 @@ EXECUTE FUNCTION fn_migrar_inscritos_a_evaluaciones
 
 CREATE EXTENSION
 IF NOT EXISTS unaccent;
+
+insert into rol
+    (nombre)
+values
+    ('administrador');
+insert into rol
+    (nombre)
+values
+    ('responsable');
+insert into rol
+    (nombre)
+values
+    ('evaluador');
+
+INSERT INTO fase
+    (nombre, descripcion, estado, fecha_inicio, fecha_fin, created_at, updated_at)
+VALUES
+    (
+        'Clasificación',
+        'Fase inicial de evaluación y clasificación de proyectos.',
+        'en proceso',
+        '2025-10-21',
+        '2025-11-05',
+        NOW(),
+        NOW()
+);
+
+-- 1️⃣ Primero creamos la función
+CREATE OR REPLACE FUNCTION public.fn_migrar_inscripcion_a_evaluacion
+()
+RETURNS trigger AS $$
+BEGIN
+    -- Inserta una evaluación pendiente para la nueva inscripción
+    INSERT INTO public.evaluacion
+        (
+        nota,
+        descripcion,
+        estado,
+        respeto,
+        integridad,
+        puntualidad,
+        id_inscripcion,
+        id_fase,
+        created_at,
+        updated_at
+        )
+    VALUES
+        (
+            NULL,
+            NULL,
+            'pendiente',
+            FALSE,
+            FALSE,
+            FALSE,
+            NEW.id,
+            1, -- puedes cambiar este número si deseas usar otra fase actual
+            NOW(),
+            NOW()
+    );
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2️⃣ Luego creamos el trigger
+DROP TRIGGER IF EXISTS trg_inscripcion_a_evaluacion
+ON public.inscripcion;
+
+CREATE TRIGGER trg_inscripcion_a_evaluacion
+AFTER
+INSERT ON public.
+inscripcion
+FOR
+EACH
+ROW
+EXECUTE
+FUNCTION public.fn_migrar_inscripcion_a_evaluacion
+();

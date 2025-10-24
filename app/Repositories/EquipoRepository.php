@@ -16,10 +16,12 @@ class EquipoRepository
     }
     public function firstOrCreate(array $data)
     {
-        $nombre = $this->normalizeString($data['nombre_equipo']);
+        // Quita acentos y normaliza el nombre
+        $nombreNormalizado = $this->normalizeString($data['nombre_equipo']);
 
-        return Equipo::whereRaw('LOWER(unaccent(nombre_equipo)) = ?', [$nombre])
-            ->first() ?? Equipo::create([
+        return Equipo::all()->first(function ($equipo) use ($nombreNormalizado) {
+            return $this->normalizeString($equipo->nombre_equipo) === $nombreNormalizado;
+        }) ?? Equipo::create([
                         'nombre_equipo' => trim($data['nombre_equipo']),
                     ]);
     }
