@@ -2,10 +2,13 @@
 
 use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\ControlFaseController;
+use App\Http\Controllers\EstadoController;
 use App\Http\Controllers\EvaluacionesController;
 use App\Http\Controllers\ImportacionesController;
 use App\Http\Controllers\ListarInscritosCotroller;
 use App\Http\Controllers\PersonaController;
+use App\Http\Controllers\UserInviteController;
+use App\Mail\SendTestEmail;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ResponsableAcademicoController;
@@ -39,12 +42,15 @@ Route::middleware(['auth:sanctum', 'role:administrador'])->group(function () {
     Route::delete('/responsable-academico/{id}', [ResponsableAcademicoController::class, 'destroy']);
 });
 
-Route::middleware(['auth:sanctum', 'role:administrador'])->group(function () {
-    Route::post('/evaluador', [EvaluadorController::class, 'store']);
-    Route::get('/evaluador', [EvaluadorController::class, 'index']);
-    Route::get('/evaluador/check', [EvaluadorController::class, 'check']);
-    Route::put('/evaluador/{id}', [EvaluadorController::class, 'update']);
-    Route::delete('/evaluador/{id}', [EvaluadorController::class, 'destroy']);
+Route::prefix('evaluador')->middleware(['auth:sanctum', 'role:administrador'])->group(function () {
+    Route::post('/', [EvaluadorController::class, 'store']);
+    Route::get('/', [EvaluadorController::class, 'index']);
+    Route::get('/check', [EvaluadorController::class, 'check']);
+    Route::put('/{id}', [EvaluadorController::class, 'update']);
+    Route::delete('/{id}', [EvaluadorController::class, 'destroy']);
+    Route::post('/import/preview', [EvaluadorController::class, 'preview']);
+    Route::post('/import/confirmar', [EvaluadorController::class, 'confirmar']);
+    Route::get('/import/errores', [EvaluadorController::class, 'descargarErrores']);
 });
 
 Route::prefix('fases')->group(function () {
@@ -71,10 +77,19 @@ Route::prefix('evaluador')->middleware(['auth:sanctum', 'role:evaluador'])->grou
     Route::get('/evaluaciones/exportar', [EvaluacionesController::class, 'exportarExcel']);
 });
 
+/* Route::get('send-mail', function () {
+    $message = 'hello word';
+    Mail::to('202108055@est.umss.edu')->send(new SendTestEmail($message));
+}); */
+Route::post('/invitaciones/send-mail/{id}', [UserInviteController::class, 'sendEmail']);
+Route::get('/notificaciones/listar', [UserInviteController::class, 'listarNotificaciones']);
+Route::put('/invitaciones/reenviar/{id}', [UserInviteController::class, 'resendEmail']);
+Route::get('/invitaciones/verificar-token/{token}', [UserInviteController::class, 'verificarToken']);
+Route::post('/invitaciones/establecer-password', [UserInviteController::class, 'establecerPassword']);
 
 
+Route::get('/estados', [EstadoController::class, 'index']);
+Route::put('/estados/{id}', [EstadoController::class, 'actualizarEstado']);
 
-
-
-
+Route::get('/areas-fases', [EstadoController::class, 'getEstadosAreas']);
 

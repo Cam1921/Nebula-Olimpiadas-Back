@@ -5,16 +5,33 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreResponsableAcademicoRequest;
 use App\Models\AreaNivel;
 use App\Models\Asignacion;
+use App\Models\Invitacion;
 use App\Models\Persona;
 use App\Models\Rol;
 use App\Models\User;
+use App\Repositories\InvitacionRepository;
+use App\Services\EvaluadoresService;
+use App\Services\PersonaService;
 use DB;
 use Hash;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
 
 class ResponsableAcademicoController extends Controller
 {
+
+    protected $invitacionRepo;
+
+    protected $evaluadorService;
+    protected $personaService;
+
+    public function __construct(EvaluadoresService $evaluadoresService, PersonaService $personaService, InvitacionRepository $invitacionRepo)
+    {
+        $this->evaluadorService = $evaluadoresService;
+        $this->personaService = $personaService;
+        $this->invitacionRepo = $invitacionRepo;
+    }
     public function index(): JsonResponse
     {
         $evaluadores = Persona::with([
@@ -60,7 +77,7 @@ class ResponsableAcademicoController extends Controller
                 $user = User::create([
                     'name' => "{$validated['nombre']} {$validated['apellidos']}",
                     'email' => $validated['email'],
-                    'password' => Hash::make($validated['ci']),
+                    'password' => Hash::make(Str::random(16)), // 🔹 aquí
                 ]);
 
                 // Crear persona
@@ -112,7 +129,7 @@ class ResponsableAcademicoController extends Controller
                         ]);
                     }
                 }
-
+                $resCorreo = $this->personaService->enviarCorreoCreacionPassword($persona->id);
                 // Cargar relaciones para la respuesta
                 $persona->load(['user', 'asignacions.area_nivel.area', 'asignacions.area_nivel.nivel']);
 
@@ -198,6 +215,13 @@ class ResponsableAcademicoController extends Controller
                     if (!empty($userData)) {
                         $persona->user->update($userData);
                     }
+                    if ($request->filled('email') && $persona->email !== $request->email) {
+                        $invitacion = Invitacion::where('email', $persona->email)->first();
+
+                        if ($invitacion) {
+                            $invitacion->update(['email' => $request->email]);
+                        }
+                    }
                 }
 
                 // 3️⃣ Actualizar asignaciones solo si se enviaron
@@ -272,7 +296,8 @@ class ResponsableAcademicoController extends Controller
             $persona->asignacions()->delete();
             $persona->user()->delete();
             $persona->delete();
-
+            $invitacion = $this->invitacionRepo->findByEmail($persona->email);
+            $this->invitacionRepo->delete($invitacion);
             return response()->json([
                 'message' => 'Evaluador eliminado correctamente.',
             ]);

@@ -4,18 +4,32 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreEvaluadorRequest;
 use App\Models\AreaNivel;
+use App\Models\Invitacion;
 use App\Models\Persona;
 use App\Models\Asignacion;
 use App\Models\Rol;
 use App\Models\User;
+use App\Repositories\InvitacionRepository;
+use App\Services\EvaluadoresService;
+use App\Services\PersonaService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-
+use Illuminate\Support\Str;
 
 class EvaluadorController extends Controller
 {
+    protected $evaluadorService;
+    protected $invitacionRepo;
+    protected $personaService;
+
+    public function __construct(EvaluadoresService $evaluadoresService, PersonaService $personaService, InvitacionRepository $invitacionRepo)
+    {
+        $this->evaluadorService = $evaluadoresService;
+        $this->personaService = $personaService;
+        $this->invitacionRepo = $invitacionRepo;
+    }
     /**
      * Listar todos los evaluadores con sus asignaciones
      */
@@ -58,11 +72,17 @@ class EvaluadorController extends Controller
             $rolEvaluador = Rol::where('nombre', 'evaluador')->firstOrFail();
 
             // Crear usuario
-            $user = User::create([
-                'name' => "{$datos['nombre']} {$datos['apellidos']}",
-                'email' => $datos['email'],
-                'password' => Hash::make($datos['ci']),
-            ]);
+
+            try {
+                $user = User::create([
+                    'name' => "{$datos['nombre']} {$datos['apellidos']}",
+                    'email' => $datos['email'],
+                    'password' => Hash::make(Str::random(16)), // 🔹 aquí
+                ]);
+            } catch (\Exception $e) {
+                return response()->json(['message' => 'Error al crear el usuario: ' . $e->getMessage()], 500);
+            }
+
 
             // Crear persona
             $persona = Persona::create([
@@ -110,6 +130,7 @@ class EvaluadorController extends Controller
                     'id_area_nivel' => $areaNivel->id,
                 ]);
             }
+            $resCorreo = $this->personaService->enviarCorreoCreacionPassword($persona->id);
 
             return response()->json([
                 'message' => 'Evaluador registrado correctamente.',
@@ -188,10 +209,18 @@ class EvaluadorController extends Controller
 
                 // 2️⃣ Actualizar Usuario (si existe)
                 if ($persona->user && isset($validated['email'])) {
+                    $oldEmail = $persona->email; // antes de cambiarlo
+
                     $persona->user->update([
                         'email' => $validated['email'],
                         'password' => Hash::make($persona->ci),
                     ]);
+
+                    // ✅ Actualizar invitación si existe con el email anterior
+                    $invitacion = Invitacion::where('email', $oldEmail)->first();
+                    if ($invitacion) {
+                        $invitacion->update(['email' => $validated['email']]);
+                    }
                 }
 
                 // 3️⃣ Actualizar asignaciones si fueron enviadas
@@ -252,11 +281,13 @@ class EvaluadorController extends Controller
             $persona->asignacions()->delete();
             $persona->user()->delete();
             $persona->delete();
-
+            $invitacion = $this->invitacionRepo->findByEmail($persona->email);
+            $this->invitacionRepo->delete($invitacion);
             return response()->json([
                 'message' => 'Evaluador eliminado correctamente.',
             ]);
         });
+
     }
 
     /**
@@ -278,5 +309,39 @@ class EvaluadorController extends Controller
         };
 
         return response()->json(['exists' => $exists]);
+    }
+
+    public function preview(Request $request): JsonResponse
+    {
+        $file = $request->file('archivo');
+        $resultado = $this->evaluadoresService->previewCsv($file);
+        return response()->json(
+            $resultado,
+            $resultado['code'] ?? 200
+        );
+    }
+    public function confirmar(Request $request): JsonResponse
+    {
+        $import_id = $request->input('import_id');
+        $resultado = $this->evaluadoresService->confirmarCsvImportId($import_id);
+        return response()->json($resultado, $resultado['code'] ?? 201);
+    }
+
+    public function descargarErrores(Request $request)
+    {
+        $import_id = $request->input('import_id');
+        $errores = $this->evaluadoresService->getErroresCsv($import_id);
+
+        if (!$errores) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se encontraron errores para este import_id'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $errores
+        ]);
     }
 }
