@@ -5,11 +5,13 @@ use DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
     public function register(Request $request)
     {
+        Log::debug('Iniciando control de duplicados', [$request->all()]);
         try {
             $request->validate([
                 'ci' => 'required|string|unique:persona',

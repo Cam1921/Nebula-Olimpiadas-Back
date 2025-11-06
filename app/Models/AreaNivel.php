@@ -68,4 +68,8 @@ class AreaNivel extends Model
 	{
 		return $this->hasMany(Asignacion::class, 'id_area_nivel');
 	}
+	public function area_nivel_fase()
+	{
+		return $this->hasMany(AreaNivelFase::class, 'id_area_nivel');
+	}
 }

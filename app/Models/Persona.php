@@ -56,10 +56,14 @@ class Persona extends Model
 		return $this->hasMany(Asignacion::class, 'id_persona');
 	}
 
+	public function persona_areas()
+	{
+		return $this->hasMany(PersonaArea::class, 'id_persona');
+	}
 	public function rols()
 	{
 		return $this->belongsToMany(Rol::class, 'persona_rol', 'id_persona', 'id_rol')
-					->withPivot('id')
-					->withTimestamps();
+			->withPivot('id')
+			->withTimestamps();
 	}
 }

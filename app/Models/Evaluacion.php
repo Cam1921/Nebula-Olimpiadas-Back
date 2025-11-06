@@ -49,6 +49,8 @@ class Evaluacion extends Model
 		'respeto',
 		'integridad',
 		'puntualidad',
+		'estado_confirmacion',
+		'observacion',
 		'id_inscripcion',
 		'id_fase'
 	];

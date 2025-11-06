@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Exports\EvaluacionesExport;
+use App\Exports\ListaResultadosExport;
+use App\Models\Evaluacion;
+use App\Repositories\EvaluacionRepository;
 use App\Services\EvaluacionesService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 
 /**
@@ -20,9 +24,11 @@ class EvaluacionesController extends Controller
     use ApiResponseTrait;
     protected $evaluacionesService;
 
+
     public function __construct(EvaluacionesService $evaluacionesService)
     {
         $this->evaluacionesService = $evaluacionesService;
+
     }
 
     /**
@@ -96,7 +102,7 @@ class EvaluacionesController extends Controller
      *     )
      * )
      */
-    public function index(Request $request)
+    public function index(Request $request, $idAreaNivelFase)
     {
         try {
             $idEvaluador = auth()->guard('sanctum')->user()->personas()->first()->id;
@@ -104,7 +110,9 @@ class EvaluacionesController extends Controller
             $page = $request->query('page', 1);
             $busqueda = $request->query('busqueda', null);
             $estado_clasificado = $request->query('estado_clasificado', null);
-            $evaluaciones = $this->evaluacionesService->obtenerEvaluacionesPorEvaluador($idEvaluador, $busqueda, $perPage, $page, $estado_clasificado);
+
+
+            $evaluaciones = $this->evaluacionesService->obtenerEvaluacionesPorEvaluador($idEvaluador, $idAreaNivelFase, $busqueda, $perPage, $page, $estado_clasificado);
 
             return response()->json(
                 $this->successResponse(
@@ -218,17 +226,40 @@ class EvaluacionesController extends Controller
      */
 
 
+    public function filtrar(Request $request)
+    {
+        $evaluaciones = $this->evaluacionesService->filtrarEvaluaciones($request->all());
+
+        return response()->json(
+            $this->successResponse(
+                'Evaluaciones obtenidas correctamente.',
+                $evaluaciones->items(),
+                [
+                    'current_page' => $evaluaciones->currentPage(),
+                    'per_page' => $evaluaciones->perPage(),
+                    'total' => $evaluaciones->total(),
+                    'last_page' => $evaluaciones->lastPage(),
+                    'next_page_url' => $evaluaciones->nextPageUrl(),
+                    'prev_page_url' => $evaluaciones->previousPageUrl(),
+                    'links' => $evaluaciones->linkCollection(),
+                ]
+            ),
+            200
+        );
+    }
 
     public function update(Request $request, $id)
     {
 
         try {
             $request->validate([
-                'nota' => 'required|numeric|min:0|max:100',
+                'nota' => 'nullable|numeric|min:0|max:100',
                 'descripcion' => 'nullable|string|max:500',
                 'conducta.respeto' => 'nullable|boolean',
                 'conducta.integridad' => 'nullable|boolean',
                 'conducta.puntualidad' => 'nullable|boolean',
+                'estado_confirmacion' => 'nullable|string',
+                'observacion' => 'nullable|string|max:500',
             ], [
                 'nota.required' => 'La nota es obligatoria.',
                 'nota.numeric' => 'La nota debe ser un número.',
@@ -271,19 +302,158 @@ class EvaluacionesController extends Controller
     public function exportarExcel(Request $request)
     {
         try {
-            $idEvaluador = auth()->guard('sanctum')->user()->personas()->first()->id;
+            $user = auth()->guard('sanctum')->user();
+            $persona = $user->personas()->first();
+
+            if (!$persona) {
+                return response()->json([
+                    'message' => 'El usuario no tiene persona asociada'
+                ], 400);
+            }
+
+            $idEvaluador = $persona->id;
             $busqueda = $request->query('busqueda', null);
             $estado_clasificado = $request->query('estado_clasificado', null);
 
+            // Nuevo parámetro: idAreaNivelFase
+            $idAreaNivelFase = $request->query('idAreaNivelFase', null);
+            if ($idAreaNivelFase !== null) {
+                $idAreaNivelFase = (int) $idAreaNivelFase;
+            }
+
+            Log::debug('Exportando Excel para evaluador', [
+                'idEvaluador' => $idEvaluador,
+                'idAreaNivelFase' => $idAreaNivelFase,
+                'busqueda' => $busqueda,
+                'estado_clasificado' => $estado_clasificado
+            ]);
+
             return Excel::download(
-                new EvaluacionesExport($idEvaluador, $busqueda, $estado_clasificado),
-                'competidores.xlsx',
+                new EvaluacionesExport($idEvaluador, $busqueda, $estado_clasificado, $idAreaNivelFase),
+                'competidores.xlsx'
             );
+
         } catch (\Throwable $e) {
+            Log::error('Error al generar Excel', [
+                'mensaje' => $e->getMessage(),
+                'traza' => $e->getTraceAsString()
+            ]);
+
             return response()->json([
                 'message' => 'Error al generar Excel',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
+
+
+
+    public function getEstadosAllFases()
+    {
+        $evaluadorId = auth()->guard('sanctum')->user()->personas()->first()->id;
+        return $this->evaluacionesService->getEstadosByEvaluador($evaluadorId);
+    }
+
+
+    public function getEstadosPorFase($faseId)
+    {
+        $evaluadorId = auth()->guard('sanctum')->user()->personas()->first()->id;
+        return $this->evaluacionesService->getEstadosByEvaluador($evaluadorId, $faseId);
+    }
+
+    public function aprobarClasificados($idAreaNivelFase)
+    {
+        try {
+            // Obtener todas las evaluaciones "Clasificado" de esa fase
+            $evaluaciones = Evaluacion::where('id_area_nivel_fase', $idAreaNivelFase)
+                ->where('estado_confirmacion', 'pendiente')
+                ->where('estado_clasificado', 'Clasificado')
+                ->get();
+
+            foreach ($evaluaciones as $evaluacion) {
+                $evaluacion->estado_confirmacion = 'aprobado';
+                $evaluacion->observacion = 'Ninguno';
+                $evaluacion->save();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Aval otorgado correctamente a los clasificados.',
+                'total_aprobados' => $evaluaciones->count(),
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al otorgar aval: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+    public function otorgarAval($idAreaNivelFase)
+    {
+        try {
+            // Obtener las evaluaciones relacionadas al área_nivel_fase indicado
+            $evaluaciones = Evaluacion::whereHas('inscripcion.area_nivel.area_nivel_fase', function ($query) use ($idAreaNivelFase) {
+                $query->where('id', $idAreaNivelFase);
+            })
+
+                ->get();
+
+            // Si no hay evaluaciones, devolver mensaje 404
+            if ($evaluaciones->isEmpty()) {
+                \Log::warning("No se encontraron evaluaciones clasificadas para el AreaNivelFase ID: $idAreaNivelFase");
+                return response()->json([
+                    'message' => 'No se encontraron evaluaciones clasificadas para este área-nivel-fase'
+                ], 404);
+            }
+
+            // Actualizar cada evaluación
+            foreach ($evaluaciones as $evaluacion) {
+                $evaluacion->update([
+                    'estado_confirmacion' => 'aprobado',
+                    'observacion' => 'Aval otorgado automáticamente'
+                ]);
+            }
+
+            // Cambiar el estado del área_nivel_fase a "confirmado"
+            $areaNivelFase = \App\Models\AreaNivelFase::find($idAreaNivelFase);
+            if ($areaNivelFase) {
+                $areaNivelFase->update(['estado' => 'confirmado']);
+            } else {
+                \Log::warning("AreaNivelFase ID $idAreaNivelFase no encontrado al intentar confirmar");
+            }
+
+            return response()->json([
+                'message' => 'Avales otorgados correctamente y área-nivel-fase confirmado',
+                'total_avales' => $evaluaciones->count()
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("Error en otorgarAval: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Error al otorgar aval',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function exportarEvaluaciones(Request $request)
+    {
+        $filtros = $request->only([
+            'id_fase',
+            'id_area',
+            'id_nivel',
+            'nivel_nombre',
+            'busqueda',
+            'estado_clasificado'
+        ]);
+
+        $evaluaciones = app(EvaluacionesService::class)
+            ->filtrarEvaluaciones(array_merge($filtros, ['per_page' => 99999, 'page' => 1]));
+
+        $datos = $evaluaciones->getCollection();
+
+        return Excel::download(new ListaResultadosExport($datos), 'evaluaciones_filtradas.xlsx');
+    }
+
+
 }

@@ -5,8 +5,10 @@ use App\Http\Controllers\ControlFaseController;
 use App\Http\Controllers\EstadoController;
 use App\Http\Controllers\EvaluacionesController;
 use App\Http\Controllers\ImportacionesController;
+use App\Http\Controllers\ImportarEvaluadoresController;
 use App\Http\Controllers\ListarInscritosCotroller;
 use App\Http\Controllers\PersonaController;
+use App\Http\Controllers\PrepararEntornoFinalController;
 use App\Http\Controllers\UserInviteController;
 use App\Mail\SendTestEmail;
 use Illuminate\Support\Facades\Route;
@@ -48,10 +50,11 @@ Route::prefix('evaluador')->middleware(['auth:sanctum', 'role:administrador'])->
     Route::get('/check', [EvaluadorController::class, 'check']);
     Route::put('/{id}', [EvaluadorController::class, 'update']);
     Route::delete('/{id}', [EvaluadorController::class, 'destroy']);
-    Route::post('/import/preview', [EvaluadorController::class, 'preview']);
-    Route::post('/import/confirmar', [EvaluadorController::class, 'confirmar']);
-    Route::get('/import/errores', [EvaluadorController::class, 'descargarErrores']);
+    Route::post('/import/preview', [ImportarEvaluadoresController::class, 'preview']);
+    Route::post('/import/confirmar', [ImportarEvaluadoresController::class, 'confirmar']);
+    Route::get('/import/errores', [ImportarEvaluadoresController::class, 'descargarErrores']);
 });
+
 
 Route::prefix('fases')->group(function () {
     Route::get('/', [ControlFaseController::class, 'index']);
@@ -71,25 +74,45 @@ Route::prefix('competidores')->middleware(['auth:sanctum', 'role:administrador']
     Route::get('/exportar', [ListarInscritosCotroller::class, 'exportar']);
 });
 
-Route::prefix('evaluador')->middleware(['auth:sanctum', 'role:evaluador'])->group(function () {
-    Route::get('/evaluaciones', [EvaluacionesController::class, 'index']);
-    Route::put('/evaluaciones/{id}', [EvaluacionesController::class, 'update']);
+Route::prefix('evaluador')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/evaluaciones/exportar', [EvaluacionesController::class, 'exportarExcel']);
+    Route::get('/evaluaciones/{idAreaNivelFase}', [EvaluacionesController::class, 'index']);
+    Route::put('/evaluaciones/{id}', [EvaluacionesController::class, 'update']);
+
+    Route::get('/niveles', [EvaluacionesController::class, 'getEstadosAllFases']);
+    Route::get('/niveles/{idFase}', [EvaluacionesController::class, 'getEstadosPorFase']);
+    Route::post('/evaluaciones/otorgar-aval/{idAreaNivelFase}', [EvaluacionesController::class, 'otorgarAval']);
+
 });
 
 /* Route::get('send-mail', function () {
     $message = 'hello word';
     Mail::to('202108055@est.umss.edu')->send(new SendTestEmail($message));
+
 }); */
-Route::post('/invitaciones/send-mail/{id}', [UserInviteController::class, 'sendEmail']);
-Route::get('/notificaciones/listar', [UserInviteController::class, 'listarNotificaciones']);
-Route::put('/invitaciones/reenviar/{id}', [UserInviteController::class, 'resendEmail']);
+Route::middleware(['auth:sanctum', 'role:administrador'])->group(function () {
+    Route::post('/invitaciones/send-mail/{id}', [UserInviteController::class, 'sendEmail']);
+    Route::get('/notificaciones/listar', [UserInviteController::class, 'listarNotificaciones']);
+    Route::put('/invitaciones/reenviar/{id}', [UserInviteController::class, 'resendEmail']);
+
+
+});
 Route::get('/invitaciones/verificar-token/{token}', [UserInviteController::class, 'verificarToken']);
 Route::post('/invitaciones/establecer-password', [UserInviteController::class, 'establecerPassword']);
+Route::middleware(['auth:sanctum', 'role:administrador'])->group(function () {
+    Route::get('/estados', [EstadoController::class, 'index']);
+    Route::put('/estados/{id}', [EstadoController::class, 'actualizarEstado']);
+    Route::get('/areas-fases', [EstadoController::class, 'getEstadosAreas']);
+});
 
+Route::get('/test', function () {
+    return response()->json([
+        'status' => 'ok',
+        'message' => 'API funcionando correctamente',
+    ]);
+});
 
-Route::get('/estados', [EstadoController::class, 'index']);
-Route::put('/estados/{id}', [EstadoController::class, 'actualizarEstado']);
-
-Route::get('/areas-fases', [EstadoController::class, 'getEstadosAreas']);
-
+Route::get('/evaluaciones/exportar', [EvaluacionesController::class, 'exportarEvaluaciones']);
+Route::get('/evaluaciones/filtrar', [EvaluacionesController::class, 'filtrar']);
+Route::get('/entorno-final/niveles', [PrepararEntornoFinalController::class, 'index']);
+Route::post('/entorno-final/preparar/{idAreaNivelFase}', [PrepararEntornoFinalController::class, 'prepararEntornoFinalPorAreaNivelFase']);

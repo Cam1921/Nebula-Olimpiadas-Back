@@ -3,10 +3,11 @@
 namespace App\Repositories;
 
 use App\Models\AreaNivel;
+use App\Models\AreaNivelFase;
 use App\Traits\NormalizeStringTrait;
 use Illuminate\Support\Facades\DB;
 
-class AreaNivelRepository extends AreaNivel
+class AreaNivelRepository
 {
     use NormalizeStringTrait;
 
@@ -30,9 +31,17 @@ class AreaNivelRepository extends AreaNivel
             }, []);
     }
 
+    public function getIdAllOlimpiada(int $olimpiadaId): array
+    {
+        return DB::table('area_nivel')
+            ->where('id_olimpiada', $olimpiadaId)
+            ->selectRaw("id, CONCAT(id_area, '-', id_nivel) as key")
+            ->pluck('id', 'key')
+            ->toArray();
+    }
     public function getEvaluaciones(int $id_area_nivel, int $id_fase)
     {
-        return $this->where('id_area_nivel', $id_area_nivel)
+        return AreaNivelFase::where('id_area_nivel', $id_area_nivel)
             ->where('id_fase', $id_fase)
             ->with([
                 'fase',

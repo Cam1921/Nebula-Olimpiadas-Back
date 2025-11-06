@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Evaluacion;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -12,16 +13,19 @@ class EvaluacionesExport implements FromCollection, WithHeadings, WithMapping
     protected $idEvaluador;
     protected $busqueda;
     protected $estado_clasificado;
-
-    public function __construct($idEvaluador, $busqueda = null, $estado_clasificado = null)
+    protected $idAreaNivelFase;
+    public function __construct($idEvaluador, $busqueda = null, $estado_clasificado = null, $idAreaNivelFase = null)
     {
         $this->idEvaluador = $idEvaluador;
         $this->busqueda = $busqueda;
         $this->estado_clasificado = $estado_clasificado;
+        $this->idAreaNivelFase = $idAreaNivelFase;
     }
 
     public function collection()
     {
+        $fase = \App\Models\AreaNivelFase::with('fase')->find($this->idAreaNivelFase);
+        $esFaseFinal = $fase && strtolower($fase->fase->nombre) === 'final';
         // Copia el query de tu repository (sin paginación)
         $query = Evaluacion::with([
             'inscripcion.competidor',
@@ -33,8 +37,19 @@ class EvaluacionesExport implements FromCollection, WithHeadings, WithMapping
             })
             ->whereHas('inscripcion.area_nivel.asignacions', function ($q) {
                 $q->where('id_persona', $this->idEvaluador);
+            })
+            ->whereHas('inscripcion.area_nivel.area_nivel_fase', function ($q) {
+                $q->where('id', $this->idAreaNivelFase);
             });
 
+
+        if ($esFaseFinal) {
+            Log::debug('Fase final', [$esFaseFinal]);
+            $query->where('estado_confirmacion', '!=', 'aprobado');
+        } else {
+            $query->where('estado_confirmacion', '!=', 'pendiente');
+
+        }
         if ($this->busqueda) {
             $query->where(function ($q) {
                 $q->whereHas('inscripcion.competidor', function ($q2) {

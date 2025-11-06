@@ -38,11 +38,31 @@ class EvaluadorController extends Controller
         $evaluadores = Persona::with([
             'user:id,email',
             'asignacions.area_nivel.area:id,nombre_area',
-            'asignacions.area_nivel.nivel:id,nombre_nivel'
+            'asignacions.area_nivel.nivel:id,nombre_nivel',
+            'persona_areas.area:id,nombre_area'
         ])
             ->whereHas('rols', fn($q) => $q->where('nombre', 'evaluador'))
             ->get()
             ->map(function ($persona) {
+                // 🔹 Combinar asignaciones de ambas tablas
+                $asignaciones = collect();
+
+                // Desde la tabla asignacion (con nivel)
+                foreach ($persona->asignacions as $a) {
+                    $asignaciones->push([
+                        'area' => optional($a->area_nivel->area)->nombre_area,
+                        'nivel' => optional($a->area_nivel->nivel)->nombre_nivel,
+                    ]);
+                }
+
+                // Desde la tabla persona_area (solo área)
+                foreach ($persona->persona_areas as $pa) {
+                    $asignaciones->push([
+                        'area' => optional($pa->area)->nombre_area,
+                        'nivel' => null,
+                    ]);
+                }
+
                 return [
                     'id' => $persona->id,
                     'nombre' => $persona->nombres,
@@ -50,10 +70,7 @@ class EvaluadorController extends Controller
                     'ci' => $persona->ci,
                     'correo' => $persona->user->email ?? null,
                     'telefono' => '+591 ' . $persona->telefono,
-                    'asignaciones' => $persona->asignacions->map(fn($a) => [
-                        'area' => optional($a->area_nivel->area)->nombre_area,
-                        'nivel' => optional($a->area_nivel->nivel)->nombre_nivel,
-                    ]),
+                    'asignaciones' => $asignaciones,
                     'fecha_registro' => optional($persona->created_at)->format('Y-m-d'),
                 ];
             });
@@ -265,29 +282,39 @@ class EvaluadorController extends Controller
         }
     }
 
-
-
-
-
-
     /**
      * Eliminar un evaluador
      */
     public function destroy($id): JsonResponse
     {
-        $persona = Persona::with('user', 'asignacions')->findOrFail($id);
+        $persona = Persona::with('user', 'asignacions', 'persona_areas')->findOrFail($id);
 
         return DB::transaction(function () use ($persona) {
+            // Eliminar asignaciones
             $persona->asignacions()->delete();
+
+            // Eliminar relaciones con persona_area
+            $persona->persona_areas()->delete();
+
+            // Eliminar roles asociados (si usas pivot)
+            $persona->rols()->detach();
+
+            // Eliminar usuario
             $persona->user()->delete();
+
+            // Eliminar persona
             $persona->delete();
+
+            // Eliminar invitación si existe
             $invitacion = $this->invitacionRepo->findByEmail($persona->email);
-            $this->invitacionRepo->delete($invitacion);
+            if ($invitacion) {
+                $this->invitacionRepo->delete($invitacion);
+            }
+
             return response()->json([
                 'message' => 'Evaluador eliminado correctamente.',
             ]);
         });
-
     }
 
     /**
@@ -311,37 +338,5 @@ class EvaluadorController extends Controller
         return response()->json(['exists' => $exists]);
     }
 
-    public function preview(Request $request): JsonResponse
-    {
-        $file = $request->file('archivo');
-        $resultado = $this->evaluadoresService->previewCsv($file);
-        return response()->json(
-            $resultado,
-            $resultado['code'] ?? 200
-        );
-    }
-    public function confirmar(Request $request): JsonResponse
-    {
-        $import_id = $request->input('import_id');
-        $resultado = $this->evaluadoresService->confirmarCsvImportId($import_id);
-        return response()->json($resultado, $resultado['code'] ?? 201);
-    }
 
-    public function descargarErrores(Request $request)
-    {
-        $import_id = $request->input('import_id');
-        $errores = $this->evaluadoresService->getErroresCsv($import_id);
-
-        if (!$errores) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No se encontraron errores para este import_id'
-            ], 404);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $errores
-        ]);
-    }
 }

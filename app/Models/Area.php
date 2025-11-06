@@ -27,13 +27,15 @@ class Area extends Model
 	protected $table = 'area';
 
 	protected $fillable = [
-		'nombre_area'
+		'nombre_area',
+		'cantidad_evaluadores',
+		'es_grupal'
 	];
 
 	public function nivels()
 	{
 		return $this->belongsToMany(Nivel::class, 'area_nivel', 'id_area', 'id_nivel')
-					->withPivot('id', 'id_olimpiada')
-					->withTimestamps();
+			->withPivot('id', 'id_olimpiada')
+			->withTimestamps();
 	}
 }

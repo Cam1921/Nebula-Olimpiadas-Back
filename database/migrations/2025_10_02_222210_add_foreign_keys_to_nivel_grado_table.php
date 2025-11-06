@@ -14,7 +14,6 @@ return new class extends Migration {
             $table->foreign(['id_grado'])->references(['id'])->on('grado')->onUpdate('no action')->onDelete('cascade');
             $table->foreign(['id_nivel'])->references(['id'])->on('nivel')->onUpdate('no action')->onDelete('cascade');
             $table->foreign(['id_olimpiada'])->references(['id'])->on('olimpiada')->onUpdate('no action')->onDelete('cascade');
-
         });
     }
 

@@ -6,7 +6,7 @@ use App\Models\Area;
 use App\Models\AreaNivelFase;
 use App\Traits\NormalizeStringTrait;
 
-class AreaNivelFaseRepository extends AreaNivelFase
+class AreaNivelFaseRepository
 {
     protected $areaNivelRepo;
 
@@ -23,7 +23,16 @@ class AreaNivelFaseRepository extends AreaNivelFase
         ])->get();
     }
 
-
+    public function getAllWithEvaluacionesFases()
+    {
+        return AreaNivelFase::with([
+            'fase',
+            'area_nivel.area',
+            'area_nivel.nivel',
+            'area_nivel.asignacions',
+            'area_nivel.inscripcions.evaluacions'
+        ])->get();
+    }
 
 
 
