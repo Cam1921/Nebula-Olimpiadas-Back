@@ -230,7 +230,6 @@ class EvaluadorController extends Controller
 
                     $persona->user->update([
                         'email' => $validated['email'],
-                        'password' => Hash::make($persona->ci),
                     ]);
 
                     // ✅ Actualizar invitación si existe con el email anterior

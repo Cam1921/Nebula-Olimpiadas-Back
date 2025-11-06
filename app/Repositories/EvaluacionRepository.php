@@ -36,9 +36,10 @@ class EvaluacionRepository
 
         // Verificar si la fase es final
         $fase = \App\Models\AreaNivelFase::with('fase')->find($idAreaNivelFase);
-        $esFaseFinal = $fase && strtolower($fase->fase->nombre) === 'final';
-
+        $esFaseFinal = $fase && strtolower($fase->fase->nombre) === 'Final';
+        Log::debug('Fase final', [$fase->fase]);
         $query = Evaluacion::with([
+            'fase',
             'inscripcion.competidor',
             'inscripcion.area_nivel.area',
             'inscripcion.area_nivel.nivel'
@@ -53,15 +54,7 @@ class EvaluacionRepository
                 $q->where('id', $idAreaNivelFase);
             });
 
-        Log::debug('Fase final', [$esFaseFinal]);
-
-        if ($esFaseFinal) {
-            Log::debug('Fase final', [$esFaseFinal]);
-            $query->where('estado_confirmacion', '!=', 'aprobado');
-        } else {
-            $query->where('estado_confirmacion', '!=', 'pendiente');
-
-        }
+        $query->where('id_fase', '=', $fase->fase->id);
 
         // 🔍 Filtro por búsqueda
         if ($busqueda) {

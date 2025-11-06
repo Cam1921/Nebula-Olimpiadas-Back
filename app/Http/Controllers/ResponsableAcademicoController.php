@@ -209,9 +209,6 @@ class ResponsableAcademicoController extends Controller
                     if ($request->filled('email')) {
                         $userData['email'] = $request->email;
                     }
-                    if ($request->filled('ci')) {
-                        $userData['password'] = Hash::make($request->ci);
-                    }
                     if (!empty($userData)) {
                         $persona->user->update($userData);
                     }
