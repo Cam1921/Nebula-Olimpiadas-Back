@@ -94,8 +94,6 @@ Route::middleware(['auth:sanctum', 'role:administrador'])->group(function () {
     Route::post('/invitaciones/send-mail/{id}', [UserInviteController::class, 'sendEmail']);
     Route::get('/notificaciones/listar', [UserInviteController::class, 'listarNotificaciones']);
     Route::put('/invitaciones/reenviar/{id}', [UserInviteController::class, 'resendEmail']);
-
-
 });
 Route::get('/invitaciones/verificar-token/{token}', [UserInviteController::class, 'verificarToken']);
 Route::post('/invitaciones/establecer-password', [UserInviteController::class, 'establecerPassword']);

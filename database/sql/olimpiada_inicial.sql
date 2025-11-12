@@ -343,6 +343,7 @@ insert into rol
 values
     ('evaluador');
 
+--Fase clasificatorio
 INSERT INTO fase
     (nombre, descripcion, estado, fecha_inicio, fecha_fin, created_at, updated_at)
 VALUES
@@ -350,8 +351,21 @@ VALUES
         'Clasificación',
         'Fase inicial de evaluación y clasificación de proyectos.',
         'en proceso',
-        '2025-10-21',
-        '2025-11-05',
+        '2025-11-21',
+        '2025-11-23',
+        NOW(),
+        NOW()
+);
+--fase final
+INSERT INTO fase
+    (nombre, descripcion, estado, fecha_inicio, fecha_fin, created_at, updated_at)
+VALUES
+    (
+        'Final',
+        'Fase dode la olimpiada concluye y se premia.',
+        'en proceso',
+        '2025-11-28',
+        '2025-11-30',
         NOW(),
         NOW()
 );
@@ -407,3 +421,11 @@ ROW
 EXECUTE
 FUNCTION public.fn_migrar_inscripcion_a_evaluacion
 ();
+
+
+INSERT INTO area_nivel_fase
+    (id_area_nivel, id_fase)
+SELECT an.id, f.id
+FROM area_nivel an
+CROSS JOIN fase f
+WHERE f.nombre = 'Clasificación';
