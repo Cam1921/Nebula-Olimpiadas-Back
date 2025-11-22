@@ -7,50 +7,46 @@
 namespace App\Models;
 
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Class Asignacion
+ * Class ConfigMedallero
  * 
  * @property int $id
- * @property int $id_persona
+ * @property int $oros
+ * @property int $platas
+ * @property int $bronces
+ * @property int $menciones_honorificas
  * @property int $id_area_nivel
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * 
- * @property Persona $persona
  * @property AreaNivel $area_nivel
- * @property Collection|Evaluacion[] $evaluacions
  *
  * @package App\Models
  */
-class Asignacion extends Model
+class ConfigMedallero extends Model
 {
-	protected $table = 'asignacion';
+	protected $table = 'config_medallero';
 
 	protected $casts = [
-		'id_persona' => 'int',
+		'oros' => 'int',
+		'platas' => 'int',
+		'bronces' => 'int',
+		'menciones_honorificas' => 'int',
 		'id_area_nivel' => 'int'
 	];
 
 	protected $fillable = [
-		'id_persona',
+		'oros',
+		'platas',
+		'bronces',
+		'menciones_honorificas',
 		'id_area_nivel'
 	];
-
-	public function persona()
-	{
-		return $this->belongsTo(Persona::class, 'id_persona');
-	}
 
 	public function area_nivel()
 	{
 		return $this->belongsTo(AreaNivel::class, 'id_area_nivel');
-	}
-
-	public function evaluacions()
-	{
-		return $this->hasMany(Evaluacion::class, 'id_asignacion');
 	}
 }

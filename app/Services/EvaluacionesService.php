@@ -26,9 +26,9 @@ class EvaluacionesService
         $this->areaNivelService = $areaNivelService;
         $this->evaluacionRepository = $evaluacionRepository;
     }
-    public function obtenerEvaluacionesPorEvaluador($idEvaluador, $idAreaNivelFase, $busqueda, $perPage, $page, $estado_clasificado)
+    public function obtenerEvaluacionesPorEvaluador($idEvaluador, $idAreaNivelFase, $busqueda, $perPage, $page, $estado_clasificado, $ordenarPor, $direccion)
     {
-        $evaluaciones = $this->evaluacionRepository->obtenerEvaluacionesPorEvaluador($idEvaluador, $idAreaNivelFase, $busqueda, $perPage, $page, $estado_clasificado);
+        $evaluaciones = $this->evaluacionRepository->obtenerEvaluacionesPorEvaluador($idEvaluador, $idAreaNivelFase, $busqueda, $perPage, $page, $estado_clasificado, $ordenarPor, $direccion);
 
         $evaluaciones->getCollection()->transform(function ($eva) {
             $estado_clasificado = null;

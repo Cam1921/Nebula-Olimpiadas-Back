@@ -31,13 +31,12 @@ class EvaluacionRepository
         ?string $busqueda = null,
         int $perPage = 10,
         int $page = 1,
-        ?string $estado_clasificado = null
+        ?string $estado_clasificado = null,
+        ?string $ordenarPor = 'id',
+        ?string $direccion = 'asc' // asc | desc
     ): LengthAwarePaginator {
 
-        // Verificar si la fase es final
         $fase = \App\Models\AreaNivelFase::with('fase')->find($idAreaNivelFase);
-        $esFaseFinal = $fase && strtolower($fase->fase->nombre) === 'Final';
-        Log::debug('Fase final', [$fase->fase]);
         $query = Evaluacion::with([
             'fase',
             'inscripcion.competidor',
@@ -56,19 +55,17 @@ class EvaluacionRepository
 
         $query->where('id_fase', '=', $fase->fase->id);
 
-        // 🔍 Filtro por búsqueda
         if ($busqueda) {
             $query->whereHas('inscripcion.competidor', function ($q) use ($busqueda) {
                 $q->where('nombres', 'ILIKE', "%{$busqueda}%")
                     ->orWhere('apellidos', 'ILIKE', "%{$busqueda}%")
                     ->orWhere('ci', 'ILIKE', "%{$busqueda}%");
-            })
-                ->orWhereHas('inscripcion.area_nivel.area', function ($q) use ($busqueda) {
-                    $q->where('nombre_area', 'ILIKE', "%{$busqueda}%");
-                });
+            })->orWhereHas('inscripcion.area_nivel.area', function ($q) use ($busqueda) {
+                $q->where('nombre_area', 'ILIKE', "%{$busqueda}%");
+            });
         }
 
-        // ⚙️ Filtro por estado_clasificado
+        // Clasificación
         if ($estado_clasificado) {
             switch ($estado_clasificado) {
                 case 'clasificados':
@@ -98,10 +95,34 @@ class EvaluacionRepository
             }
         }
 
-        $query->orderBy('id', 'asc');
+        // ⭐ ORDENAMIENTO DINÁMICO
+        switch ($ordenarPor) {
+            case 'nombre':
+
+                $direccion = strtolower($direccion);
+                if (!in_array($direccion, ['asc', 'desc'])) {
+                    $direccion = 'asc';
+                }
+
+                $query->orderBy(
+                    \App\Models\Competidor::select('nombres')
+                        ->join('inscripcion', 'inscripcion.id_competidor', '=', 'competidor.id')
+                        ->whereColumn('inscripcion.id', 'evaluacion.id_inscripcion')
+                        ->limit(1),
+                    $direccion
+                );
+
+                break;
+
+            default:
+                $query->orderByRaw("$ordenarPor $direccion NULLS LAST");
+
+                break;
+        }
 
         return $query->paginate($perPage, ['*'], 'page', $page);
     }
+
 
 
     public function getEstadosByEvaluador(int $evaluadorId, ?int $faseId = null)

@@ -14,12 +14,17 @@ class EvaluacionesExport implements FromCollection, WithHeadings, WithMapping
     protected $busqueda;
     protected $estado_clasificado;
     protected $idAreaNivelFase;
-    public function __construct($idEvaluador, $busqueda = null, $estado_clasificado = null, $idAreaNivelFase = null)
+    protected $ordenarPor;
+    protected $direccion;
+
+    public function __construct($idEvaluador, $busqueda = null, $estado_clasificado = null, $idAreaNivelFase = null, $ordenarPor = 'id', $direccion = 'asc')
     {
         $this->idEvaluador = $idEvaluador;
         $this->busqueda = $busqueda;
         $this->estado_clasificado = $estado_clasificado;
         $this->idAreaNivelFase = $idAreaNivelFase;
+        $this->ordenarPor = $ordenarPor;
+        $this->direccion = $direccion;
     }
 
     public function collection()
@@ -88,8 +93,31 @@ class EvaluacionesExport implements FromCollection, WithHeadings, WithMapping
                         });
                     break;
             }
-        }
 
+        }
+        switch ($this->ordenarPor) {
+            case 'nombre':
+
+                $direccion = strtolower($this->direccion);
+                if (!in_array($direccion, ['asc', 'desc'])) {
+                    $direccion = 'asc';
+                }
+
+                $query->orderBy(
+                    \App\Models\Competidor::select('nombres')
+                        ->join('inscripcion', 'inscripcion.id_competidor', '=', 'competidor.id')
+                        ->whereColumn('inscripcion.id', 'evaluacion.id_inscripcion')
+                        ->limit(1),
+                    $direccion
+                );
+
+                break;
+
+            default:
+                $query->orderByRaw("$this->ordenarPor $this->direccion NULLS LAST");
+
+                break;
+        }
         return $query->get();
     }
 

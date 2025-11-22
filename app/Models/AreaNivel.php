@@ -25,6 +25,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property Olimpiada $olimpiada
  * @property Collection|Inscripcion[] $inscripcions
  * @property Collection|Asignacion[] $asignacions
+ * @property Collection|Fase[] $fases
+ * @property Collection|ConfigMedallero[] $config_medalleros
  *
  * @package App\Models
  */
@@ -67,6 +69,18 @@ class AreaNivel extends Model
 	public function asignacions()
 	{
 		return $this->hasMany(Asignacion::class, 'id_area_nivel');
+	}
+
+	public function fases()
+	{
+		return $this->belongsToMany(Fase::class, 'area_nivel_fase', 'id_area_nivel', 'id_fase')
+			->withPivot('id', 'estado', 'fecha_ini', 'fecha_fin')
+			->withTimestamps();
+	}
+
+	public function config_medalleros()
+	{
+		return $this->hasMany(ConfigMedallero::class, 'id_area_nivel');
 	}
 	public function area_nivel_fase()
 	{

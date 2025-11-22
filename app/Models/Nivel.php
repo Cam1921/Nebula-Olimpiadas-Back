@@ -17,6 +17,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $nombre_nivel
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property int $limite_evaluador
+ * @property int $cantidad_evaluadores
  * 
  * @property Collection|Grado[] $grados
  * @property Collection|Area[] $areas
@@ -27,8 +29,15 @@ class Nivel extends Model
 {
 	protected $table = 'nivel';
 
+	protected $casts = [
+		'limite_evaluador' => 'int',
+		'cantidad_evaluadores' => 'int'
+	];
+
 	protected $fillable = [
-		'nombre_nivel'
+		'nombre_nivel',
+		'limite_evaluador',
+		'cantidad_evaluadores'
 	];
 
 	public function grados()

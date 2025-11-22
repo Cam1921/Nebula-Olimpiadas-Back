@@ -3,12 +3,17 @@
 namespace App\Repositories;
 
 use App\Models\Fase;
+use Illuminate\Support\Facades\Log;
 
 class FaseRepository
 {
     public function all()
     {
-        return Fase::orderBy('id', 'desc')->get();
+        return Fase::all();
+    }
+    public function getFases()
+    {
+        return Fase::select('id', 'nombre')->get();
     }
 
     public function paginate(?string $busqueda = null, int $perPage = 10)
@@ -33,8 +38,10 @@ class FaseRepository
         return Fase::create($data);
     }
 
-    public function update(Fase $fase, array $data): Fase
+    public function update($id, array $data)
     {
+        Log::debug('Actualizar Fase', ['id' => $id, 'data' => $data]);
+        $fase = $this->findById($id);
         $fase->update($data);
         return $fase;
     }
@@ -44,6 +51,10 @@ class FaseRepository
         return $fase->delete();
     }
 
+    public function findNombre(string $nombre): ?Fase
+    {
+        return Fase::where('nombre', $nombre)->first();
+    }
     public function cerrarFasesActivas()
     {
         return Fase::where('estado', 'abierto')->update(['estado' => 'cerrado']);

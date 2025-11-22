@@ -23,9 +23,13 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id_fase
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property string|null $observacion
+ * @property string $estado_confirmacion
+ * @property int|null $id_asignacion
  * 
  * @property Inscripcion $inscripcion
  * @property Fase $fase
+ * @property Asignacion|null $asignacion
  *
  * @package App\Models
  */
@@ -39,7 +43,8 @@ class Evaluacion extends Model
 		'integridad' => 'bool',
 		'puntualidad' => 'bool',
 		'id_inscripcion' => 'int',
-		'id_fase' => 'int'
+		'id_fase' => 'int',
+		'id_asignacion' => 'int'
 	];
 
 	protected $fillable = [
@@ -49,10 +54,11 @@ class Evaluacion extends Model
 		'respeto',
 		'integridad',
 		'puntualidad',
-		'estado_confirmacion',
-		'observacion',
 		'id_inscripcion',
-		'id_fase'
+		'id_fase',
+		'observacion',
+		'estado_confirmacion',
+		'id_asignacion'
 	];
 
 	public function inscripcion()
@@ -63,5 +69,10 @@ class Evaluacion extends Model
 	public function fase()
 	{
 		return $this->belongsTo(Fase::class, 'id_fase');
+	}
+
+	public function asignacion()
+	{
+		return $this->belongsTo(Asignacion::class, 'id_asignacion');
 	}
 }

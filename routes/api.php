@@ -1,12 +1,16 @@
 <?php
 
+use App\Http\Controllers\ActividadController;
+use App\Http\Controllers\AsignacionController;
 use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\ControlFaseController;
 use App\Http\Controllers\EstadoController;
 use App\Http\Controllers\EvaluacionesController;
+use App\Http\Controllers\FaseController;
 use App\Http\Controllers\ImportacionesController;
 use App\Http\Controllers\ImportarEvaluadoresController;
 use App\Http\Controllers\ListarInscritosCotroller;
+use App\Http\Controllers\MedalleroController;
 use App\Http\Controllers\PersonaController;
 use App\Http\Controllers\PrepararEntornoFinalController;
 use App\Http\Controllers\UserInviteController;
@@ -29,7 +33,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/persona', [PersonaController::class, 'update']);
 });
 
-Route::prefix('catalogos')->middleware(['auth:sanctum'])->group(function () {
+Route::prefix('catalogos')->group(function () {
     Route::get('/areas', [CatalogoController::class, 'areas']);
     Route::get('/niveles', [CatalogoController::class, 'niveles']);
     Route::get('/area-niveles', [CatalogoController::class, 'areaNiveles']);
@@ -57,10 +61,26 @@ Route::prefix('evaluador')->middleware(['auth:sanctum', 'role:administrador'])->
 
 
 Route::prefix('fases')->group(function () {
-    Route::get('/', [ControlFaseController::class, 'index']);
-    Route::post('/', [ControlFaseController::class, 'store']);
-    Route::put('/{id}', [ControlFaseController::class, 'update']);
-    Route::delete('/{id}', [ControlFaseController::class, 'destroy']);
+    Route::get('/', [FaseController::class, 'index']);
+    Route::get('/dropdown', [FaseController::class, 'obtenerFases']);
+    Route::post('/publicar-todo', [FaseController::class, 'publicarTodo']);
+    Route::get('/{id}', [FaseController::class, 'show']);
+    Route::post('/', [FaseController::class, 'store']);
+    Route::put('/{id}', [FaseController::class, 'update']);
+    Route::delete('/{id}', [FaseController::class, 'destroy']);
+
+    Route::get('/verificar/{nombreFase}', [FaseController::class, 'verificarFase']);
+    Route::get('/{faseId}/actividades', [ActividadController::class, 'porFase']);
+
+});
+
+Route::prefix('actividades')->group(function () {
+    Route::get('/', [ActividadController::class, 'index']);
+    Route::get('/{id}', [ActividadController::class, 'show']);
+    Route::post('/', [ActividadController::class, 'store']);
+    Route::put('/{id}', [ActividadController::class, 'update']);
+    Route::delete('/{id}', [ActividadController::class, 'destroy']);
+    Route::get('/verificar/{nombreFase}/{nombreActividad}', [ActividadController::class, 'verificarActividad']);
 });
 
 Route::prefix('importaciones')->middleware(['auth:sanctum', 'role:administrador'])->group(function () {
@@ -114,3 +134,23 @@ Route::get('/evaluaciones/exportar', [EvaluacionesController::class, 'exportarEv
 Route::get('/evaluaciones/filtrar', [EvaluacionesController::class, 'filtrar']);
 Route::get('/entorno-final/niveles', [PrepararEntornoFinalController::class, 'index']);
 Route::post('/entorno-final/preparar/{idAreaNivelFase}', [PrepararEntornoFinalController::class, 'prepararEntornoFinalPorAreaNivelFase']);
+
+Route::get('/config-medallero', [MedalleroController::class, 'index']);
+Route::post('/config-medallero/save-all', [MedalleroController::class, 'saveAll']);
+
+
+//rutas para realizar la asignación
+
+Route::prefix('asignaciones')->group(function () {
+    Route::get('/', [AsignacionController::class, 'index']);
+    Route::get('/{areaNivelId}/evaluadores', [AsignacionController::class, 'verEvaluadores']);
+    Route::post('/{areaNivelId}/evaluadores', [AsignacionController::class, 'asignarEvaluadores']);
+    Route::delete('/{areaNivelId}/evaluadores', [AsignacionController::class, 'quitarEvaluadores']);
+    Route::get('/evaluadores/disponibles/{areaId}', [AsignacionController::class, 'evaluadoresDisponibles']);
+
+
+    Route::get('/evaluadores/disponibles/{areaId}', [AsignacionController::class, 'evaluadoresDisponibles']);
+    Route::post('/asignar-evaluadores', [AsignacionController::class, 'asignarInscritos']);
+    Route::get('/evaluadores', [AsignacionController::class, 'listar']);
+
+});

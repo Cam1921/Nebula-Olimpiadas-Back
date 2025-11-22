@@ -351,8 +351,6 @@ VALUES
         'Clasificación',
         'Fase inicial de evaluación y clasificación de proyectos.',
         'en proceso',
-        '2025-11-21',
-        '2025-11-23',
         NOW(),
         NOW()
 );
@@ -364,8 +362,17 @@ VALUES
         'Final',
         'Fase dode la olimpiada concluye y se premia.',
         'en proceso',
-        '2025-11-28',
-        '2025-11-30',
+        NOW(),
+        NOW()
+);
+--fase inscripcion
+INSERT INTO fase
+    (nombre, descripcion, estado, created_at, updated_at)
+VALUES
+    (
+        'Inscripcion',
+        'Fase dode la olimpiada concluye y se premia.',
+        'en proceso',
         NOW(),
         NOW()
 );
@@ -429,3 +436,103 @@ SELECT an.id, f.id
 FROM area_nivel an
 CROSS JOIN fase f
 WHERE f.nombre = 'Clasificación';
+
+
+INSERT INTO actividad
+    (nombre, id_fase, created_at, updated_at)
+VALUES
+    (
+        'calificacion fase c',
+        1,
+        NOW(),
+        NOW()
+);
+
+
+INSERT INTO config_medallero
+    (
+    id_area_nivel,
+    oros,
+    platas,
+    bronces,
+    menciones_honorificas,
+    created_at,
+    updated_at
+    )
+SELECT
+    id, -- id del registro en area_nivel
+    0, -- oros
+    0, -- platas
+    0, -- bronces
+    0, -- menciones_honorificas
+    NOW(), -- created_at
+    NOW()
+-- updated_at
+FROM area_nivel;
+
+
+
+
+INSERT INTO actividad
+    (nombre, id_fase, created_at, updated_at)
+VALUES
+    (
+        'Calificacion de competidores',
+        1,
+        NOW(),
+        NOW()
+);
+INSERT INTO actividad
+    (nombre, id_fase, created_at, updated_at)
+VALUES
+    (
+        'Calificacion de competidores',
+        3,
+        NOW(),
+        NOW()
+);
+INSERT INTO actividad
+    (nombre, id_fase, created_at, updated_at)
+VALUES
+    (
+        'Publicacion de resultados',
+        3,
+        NOW(),
+        NOW()
+);
+INSERT INTO actividad
+    (nombre, id_fase, created_at, updated_at)
+VALUES
+    (
+        'Publicacion de resultados',
+        1,
+        NOW(),
+        NOW()
+);
+INSERT INTO actividad
+    (nombre, id_fase, created_at, updated_at)
+VALUES
+    (
+        'Premiacion',
+        3,
+        NOW(),
+        NOW()
+);
+INSERT INTO actividad
+    (nombre, id_fase, created_at, updated_at)
+VALUES
+    (
+        'Asignar evaluadores',
+        1,
+        NOW(),
+        NOW()
+);
+INSERT INTO actividad
+    (nombre, id_fase, created_at, updated_at)
+VALUES
+    (
+        'Importacion de competidores',
+        2,
+        NOW(),
+        NOW()
+)

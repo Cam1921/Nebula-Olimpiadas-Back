@@ -110,10 +110,10 @@ class EvaluacionesController extends Controller
             $page = $request->query('page', 1);
             $busqueda = $request->query('busqueda', null);
             $estado_clasificado = $request->query('estado_clasificado', null);
-
-
-            $evaluaciones = $this->evaluacionesService->obtenerEvaluacionesPorEvaluador($idEvaluador, $idAreaNivelFase, $busqueda, $perPage, $page, $estado_clasificado);
-
+            $ordenarPor = $request->query('ordenar_por', 'id');
+            $direccion = $request->query('direccion', 'asc');
+            $evaluaciones = $this->evaluacionesService->obtenerEvaluacionesPorEvaluador($idEvaluador, $idAreaNivelFase, $busqueda, $perPage, $page, $estado_clasificado, $ordenarPor, $direccion);
+            Log::debug('Obteniendo evaluaciones para evaluador', ['request' => $request, 'direccion' => $direccion, 'ordenarPor' => $ordenarPor, 'estado_clasificado' => $estado_clasificado, 'busqueda' => $busqueda, 'perPage' => $perPage, 'page' => $page, 'idEvaluador' => $idEvaluador, 'idAreaNivelFase' => $idAreaNivelFase]);
             return response()->json(
                 $this->successResponse(
                     'Evaluaciones obtenidas correctamente.',
@@ -314,6 +314,9 @@ class EvaluacionesController extends Controller
             $idEvaluador = $persona->id;
             $busqueda = $request->query('busqueda', null);
             $estado_clasificado = $request->query('estado_clasificado', null);
+            $ordenarPor = $request->query('ordenar_por', 'id');
+            $direccion = $request->query('direccion', 'asc');
+
 
             // Nuevo parámetro: idAreaNivelFase
             $idAreaNivelFase = $request->query('idAreaNivelFase', null);
@@ -329,7 +332,7 @@ class EvaluacionesController extends Controller
             ]);
 
             return Excel::download(
-                new EvaluacionesExport($idEvaluador, $busqueda, $estado_clasificado, $idAreaNivelFase),
+                new EvaluacionesExport($idEvaluador, $busqueda, $estado_clasificado, $idAreaNivelFase, $ordenarPor, $direccion),
                 'competidores.xlsx'
             );
 
