@@ -352,6 +352,8 @@ VALUES
         'Fase inicial de evaluación y clasificación de proyectos.',
         'en proceso',
         NOW(),
+        NOW(),
+        NOW(),
         NOW()
 );
 --fase final
@@ -363,16 +365,20 @@ VALUES
         'Fase dode la olimpiada concluye y se premia.',
         'en proceso',
         NOW(),
+        NOW(),
+        NOW(),
         NOW()
 );
 --fase inscripcion
 INSERT INTO fase
-    (nombre, descripcion, estado, created_at, updated_at)
+    (nombre, descripcion, estado,fecha_inicio, fecha_fin, created_at, updated_at)
 VALUES
     (
         'Inscripcion',
         'Fase dode la olimpiada concluye y se premia.',
         'en proceso',
+        NOW(),
+        NOW(),
         NOW(),
         NOW()
 );
