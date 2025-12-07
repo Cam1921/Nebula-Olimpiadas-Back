@@ -346,7 +346,7 @@ values
 -------------------------------------------------------------------------------
 -- Fase Inscripción
 INSERT INTO fase
-    (nombre, descripcion, estado,fecha_inicio, fecha_fin, created_at, updated_at)
+    (nombre, descripcion, estado, created_at, updated_at)
 VALUES
     (
         'inscripcion',
@@ -366,9 +366,6 @@ VALUES
         'clasificacion',
         'Fase inicial de evaluación y clasificación de proyectos.',
         'en proceso',
-
-        NOW(),
-        NOW(),
         NOW(),
         NOW()
     );
