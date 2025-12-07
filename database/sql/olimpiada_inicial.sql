@@ -343,10 +343,40 @@ insert into rol
 values
     ('evaluador');
 
+<<<<<<< HEAD
 -------------------------------------------------------------------------------
 -- Fase Inscripción
+=======
+--Fase clasificatorio
 INSERT INTO fase
-    (nombre, descripcion, estado, created_at, updated_at)
+    (nombre, descripcion, estado, fecha_inicio, fecha_fin, created_at, updated_at)
+VALUES
+    (
+        'Clasificación',
+        'Fase inicial de evaluación y clasificación de proyectos.',
+        'en proceso',
+        NOW(),
+        NOW(),
+        NOW(),
+        NOW()
+);
+--fase final
+INSERT INTO fase
+    (nombre, descripcion, estado, fecha_inicio, fecha_fin, created_at, updated_at)
+VALUES
+    (
+        'Final',
+        'Fase dode la olimpiada concluye y se premia.',
+        'en proceso',
+        NOW(),
+        NOW(),
+        NOW(),
+        NOW()
+);
+--fase inscripcion
+>>>>>>> origin/integracion
+INSERT INTO fase
+    (nombre, descripcion, estado,fecha_inicio, fecha_fin, created_at, updated_at)
 VALUES
     (
         'inscripcion',
@@ -367,6 +397,8 @@ VALUES
         'Fase inicial de evaluación y clasificación de proyectos.',
         'en proceso',
 
+        NOW(),
+        NOW(),
         NOW(),
         NOW()
     );
@@ -554,6 +586,7 @@ WHERE LOWER(nombre) = LOWER('final')
 LIMIT 1;
 INSERT INTO actividad
     (nombre, id_fase, created_at, updated_at)
+<<<<<<< HEAD
 SELECT
     'importacion',
     id,
@@ -592,3 +625,12 @@ ADD CONSTRAINT evaluacion_id_asignacion_foreign
 FOREIGN KEY (id_asignacion)
 REFERENCES asignacion(id)
 ON DELETE SET NULL;	
+=======
+VALUES
+    (
+        'Importacion de competidores',
+        2,
+        NOW(),
+        NOW()
+)
+>>>>>>> origin/integracion
