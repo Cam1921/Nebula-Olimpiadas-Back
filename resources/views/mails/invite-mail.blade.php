@@ -1,13 +1,12 @@
 @php
-    $asignacion = $data->asignacions->first();
+    $asignacion = $data->persona_areas->first();
 @endphp
 
 <p>Hola {{ $data->nombres }},</p>
 
 <p>
     Nos alegra contar contigo para colaborar en la <strong>Olimpiada Oh! SanSi</strong>.<br>
-    <strong>Área:</strong> {{ $asignacion->area_nivel->area->nombre_area ?? '-' }}<br>
-    <strong>Nivel:</strong> {{ $asignacion->area_nivel->nivel->nombre_nivel ?? '-' }}
+    <strong>Área:</strong> {{ $asignacion->area->nombre_area ?? '-' }}<br>    
 </p>
 
 <p>

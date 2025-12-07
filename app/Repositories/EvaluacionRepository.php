@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\Evaluacion;
 use App\Models\Nivel;
 use App\Models\NivelGrado;
+use App\Models\Persona;
 use App\Services\AreaNivelService;
 use App\Traits\ApiResponseTrait;
 use App\Traits\NormalizeStringTrait;
@@ -24,106 +25,6 @@ class EvaluacionRepository
         $this->areaNivelFaseRepo = $areaNivelFaseRepo;
         $this->areaNivelService = $areaNivelService;
     }
-
-    public function obtenerEvaluacionesPorEvaluador(
-        int $idEvaluador,
-        int $idAreaNivelFase,
-        ?string $busqueda = null,
-        int $perPage = 10,
-        int $page = 1,
-        ?string $estado_clasificado = null,
-        ?string $ordenarPor = 'id',
-        ?string $direccion = 'asc' // asc | desc
-    ): LengthAwarePaginator {
-
-        $fase = \App\Models\AreaNivelFase::with('fase')->find($idAreaNivelFase);
-        $query = Evaluacion::with([
-            'fase',
-            'inscripcion.competidor',
-            'inscripcion.area_nivel.area',
-            'inscripcion.area_nivel.nivel'
-        ])
-            ->whereHas('inscripcion.area_nivel.asignacions.persona.rols', function ($q) {
-                $q->where('nombre', 'evaluador');
-            })
-            ->whereHas('inscripcion.area_nivel.asignacions', function ($q) use ($idEvaluador) {
-                $q->where('id_persona', $idEvaluador);
-            })
-            ->whereHas('inscripcion.area_nivel.area_nivel_fase', function ($q) use ($idAreaNivelFase) {
-                $q->where('id', $idAreaNivelFase);
-            });
-
-        $query->where('id_fase', '=', $fase->fase->id);
-
-        if ($busqueda) {
-            $query->whereHas('inscripcion.competidor', function ($q) use ($busqueda) {
-                $q->where('nombres', 'ILIKE', "%{$busqueda}%")
-                    ->orWhere('apellidos', 'ILIKE', "%{$busqueda}%")
-                    ->orWhere('ci', 'ILIKE', "%{$busqueda}%");
-            })->orWhereHas('inscripcion.area_nivel.area', function ($q) use ($busqueda) {
-                $q->where('nombre_area', 'ILIKE', "%{$busqueda}%");
-            });
-        }
-
-        // Clasificación
-        if ($estado_clasificado) {
-            switch ($estado_clasificado) {
-                case 'clasificados':
-                    $query->whereNotNull('nota')
-                        ->where('nota', '>=', 51)
-                        ->where('respeto', true)
-                        ->where('integridad', true)
-                        ->where('puntualidad', true);
-                    break;
-
-                case 'no_clasificados':
-                    $query->whereNotNull('nota')
-                        ->where('nota', '<', 51)
-                        ->where('respeto', true)
-                        ->where('integridad', true)
-                        ->where('puntualidad', true);
-                    break;
-
-                case 'descalificados':
-                    $query->whereNotNull('nota')
-                        ->where(function ($q) {
-                            $q->where('respeto', false)
-                                ->orWhere('integridad', false)
-                                ->orWhere('puntualidad', false);
-                        });
-                    break;
-            }
-        }
-
-        // ⭐ ORDENAMIENTO DINÁMICO
-        switch ($ordenarPor) {
-            case 'nombre':
-
-                $direccion = strtolower($direccion);
-                if (!in_array($direccion, ['asc', 'desc'])) {
-                    $direccion = 'asc';
-                }
-
-                $query->orderBy(
-                    \App\Models\Competidor::select('nombres')
-                        ->join('inscripcion', 'inscripcion.id_competidor', '=', 'competidor.id')
-                        ->whereColumn('inscripcion.id', 'evaluacion.id_inscripcion')
-                        ->limit(1),
-                    $direccion
-                );
-
-                break;
-
-            default:
-                $query->orderByRaw("$ordenarPor $direccion NULLS LAST");
-
-                break;
-        }
-
-        return $query->paginate($perPage, ['*'], 'page', $page);
-    }
-
-
 
     public function getEstadosByEvaluador(int $evaluadorId, ?int $faseId = null)
     {

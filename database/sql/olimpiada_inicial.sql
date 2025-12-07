@@ -25,14 +25,14 @@ VALUES
     ('6to Secundaria', NOW(), NOW());
 
 INSERT INTO area
-    (nombre_area, created_at, updated_at)
+    (nombre_area, cantidad_evaluadores,es_grupal,created_at, updated_at)
 VALUES
-    ('Informatica', NOW(), NOW()),
-    ('Astrofisica', NOW(), NOW()),
-    ('Biologia', NOW(), NOW()),
-    ('Matematicas', NOW(), NOW()),
-    ('Quimica', NOW(), NOW()),
-    ('Robotica', NOW(), NOW());
+    ('Informatica', 6, false, NOW(), NOW()),
+    ('Astrofisica', 6, false, NOW(), NOW()),
+    ('Biologia', 6, false, NOW(), NOW()),
+    ('Matematicas', 6, false, NOW(), NOW()),
+    ('Quimica', 6, false, NOW(), NOW()),
+    ('Robotica', 6, true, NOW(), NOW());
 
 INSERT INTO nivel
     (nombre_nivel, created_at, updated_at)
@@ -343,76 +343,104 @@ insert into rol
 values
     ('evaluador');
 
---Fase clasificatorio
-INSERT INTO fase
-    (nombre, descripcion, estado, fecha_inicio, fecha_fin, created_at, updated_at)
-VALUES
-    (
-        'Clasificación',
-        'Fase inicial de evaluación y clasificación de proyectos.',
-        'en proceso',
-        NOW(),
-        NOW()
-);
---fase final
-INSERT INTO fase
-    (nombre, descripcion, estado, fecha_inicio, fecha_fin, created_at, updated_at)
-VALUES
-    (
-        'Final',
-        'Fase dode la olimpiada concluye y se premia.',
-        'en proceso',
-        NOW(),
-        NOW()
-);
---fase inscripcion
+-------------------------------------------------------------------------------
+-- Fase Inscripción
 INSERT INTO fase
     (nombre, descripcion, estado, created_at, updated_at)
 VALUES
     (
-        'Inscripcion',
-        'Fase dode la olimpiada concluye y se premia.',
+        'inscripcion',
+        'Fase donde se habilita el registro y la inscripción de participantes.',
         'en proceso',
+
+        NOW
+(),
+        NOW
+()
+    );
+-- Fase Clasificación
+INSERT INTO fase
+    (nombre, descripcion, estado, created_at, updated_at)
+VALUES
+    (
+        'clasificacion',
+        'Fase inicial de evaluación y clasificación de proyectos.',
+        'en proceso',
+
         NOW(),
         NOW()
-);
+    );
+
+-- Fase Final
+INSERT INTO fase
+    (nombre, descripcion, estado, created_at, updated_at)
+VALUES
+    (
+        'final',
+        'Fase donde la olimpiada concluye y se realiza la premiación.',
+        'en proceso',
+
+        NOW
+(),
+        NOW
+()
+    );
+
+
+
 
 -- 1️⃣ Primero creamos la función
 CREATE OR REPLACE FUNCTION public.fn_migrar_inscripcion_a_evaluacion
 ()
 RETURNS trigger AS $$
+DECLARE
+    v_id_fase INT;
 BEGIN
-    -- Inserta una evaluación pendiente para la nueva inscripción
+    -- Buscar el id_fase donde el nombre sea "clasificación"
+    SELECT id
+    INTO v_id_fase
+    FROM public.fase
+    WHERE LOWER(nombre) = LOWER('clasificacion')
+    LIMIT 1;
+
+    -- Si no se encuentra, puedes lanzar un error opcionalmente
+    IF v_id_fase IS NULL THEN
+        RAISE EXCEPTION 'No existe ninguna fase con el nombre "clasificación"';
+END
+IF;
+
+    -- Inserta la evaluación pendiente
     INSERT INTO public.evaluacion
-        (
-        nota,
-        descripcion,
-        estado,
-        respeto,
-        integridad,
-        puntualidad,
-        id_inscripcion,
-        id_fase,
-        created_at,
-        updated_at
-        )
-    VALUES
-        (
-            NULL,
-            NULL,
-            'pendiente',
-            FALSE,
-            FALSE,
-            FALSE,
-            NEW.id,
-            1, -- puedes cambiar este número si deseas usar otra fase actual
-            NOW(),
-            NOW()
+    (
+    nota,
+    descripcion,
+    estado,
+    respeto,
+    integridad,
+    puntualidad,
+    id_inscripcion,
+    id_fase,
+    created_at,
+    updated_at
+    )
+VALUES
+    (
+        NULL,
+        NULL,
+        'pendiente',
+        FALSE,
+        FALSE,
+        FALSE,
+        NEW.id,
+        v_id_fase, -- ahora es dinámico
+        NOW(),
+        NOW()
     );
 
-    RETURN NEW;
+RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
 
 -- 2️⃣ Luego creamos el trigger
 DROP TRIGGER IF EXISTS trg_inscripcion_a_evaluacion
@@ -435,18 +463,9 @@ INSERT INTO area_nivel_fase
 SELECT an.id, f.id
 FROM area_nivel an
 CROSS JOIN fase f
-WHERE f.nombre = 'Clasificación';
+WHERE f.nombre = 'clasificacion';
 
 
-INSERT INTO actividad
-    (nombre, id_fase, created_at, updated_at)
-VALUES
-    (
-        'calificacion fase c',
-        1,
-        NOW(),
-        NOW()
-);
 
 
 INSERT INTO config_medallero
@@ -475,64 +494,101 @@ FROM area_nivel;
 
 INSERT INTO actividad
     (nombre, id_fase, created_at, updated_at)
-VALUES
-    (
-        'Calificacion de competidores',
-        1,
-        NOW(),
-        NOW()
-);
+SELECT
+    'calificacion',
+    id,
+    NOW(),
+    NOW()
+FROM fase
+WHERE LOWER(nombre) = LOWER('clasificacion')
+LIMIT 1;
 INSERT INTO actividad
     (nombre, id_fase, created_at, updated_at)
-VALUES
-    (
-        'Calificacion de competidores',
-        3,
-        NOW(),
-        NOW()
-);
+SELECT
+    'calificacion',
+    id,
+    NOW(),
+    NOW()
+FROM fase
+WHERE LOWER(nombre) = LOWER('final')
+LIMIT 1;
 INSERT INTO actividad
     (nombre, id_fase, created_at, updated_at)
-VALUES
-    (
-        'Publicacion de resultados',
-        3,
-        NOW(),
-        NOW()
-);
+SELECT
+    'publicacion',
+    id,
+    NOW(),
+    NOW()
+FROM fase
+WHERE LOWER(nombre) = LOWER('clasificacion')
+LIMIT 1;
 INSERT INTO actividad
     (nombre, id_fase, created_at, updated_at)
-VALUES
-    (
-        'Publicacion de resultados',
-        1,
-        NOW(),
-        NOW()
-);
+SELECT
+    'publicacion',
+    id,
+    NOW(),
+    NOW()
+FROM fase
+WHERE LOWER(nombre) = LOWER('final')
+LIMIT 1;
 INSERT INTO actividad
     (nombre, id_fase, created_at, updated_at)
-VALUES
-    (
-        'Premiacion',
-        3,
-        NOW(),
-        NOW()
-);
+SELECT
+    'asignar',
+    id,
+    NOW(),
+    NOW()
+FROM fase
+WHERE LOWER(nombre) = LOWER('clasificacion')
+LIMIT 1;
 INSERT INTO actividad
     (nombre, id_fase, created_at, updated_at)
-VALUES
-    (
-        'Asignar evaluadores',
-        1,
-        NOW(),
-        NOW()
-);
+SELECT
+    'asignar',
+    id,
+    NOW(),
+    NOW()
+FROM fase
+WHERE LOWER(nombre) = LOWER('final')
+LIMIT 1;
 INSERT INTO actividad
     (nombre, id_fase, created_at, updated_at)
-VALUES
-    (
-        'Importacion de competidores',
-        2,
-        NOW(),
-        NOW()
-)
+SELECT
+    'importacion',
+    id,
+    NOW(),
+    NOW()
+FROM fase
+WHERE LOWER(nombre) = LOWER('inscripcion')
+LIMIT 1;
+
+INSERT INTO actividad
+    (nombre, id_fase, created_at, updated_at)
+SELECT
+    'revicion',
+    id,
+    NOW(),
+    NOW()
+FROM fase
+WHERE LOWER(nombre) = LOWER('clasificacion')
+LIMIT 1;
+INSERT INTO actividad
+    (nombre, id_fase, created_at, updated_at)
+SELECT
+    'revicion',
+    id,
+    NOW(),
+    NOW()
+FROM fase
+WHERE LOWER(nombre) = LOWER('final')
+LIMIT 1;
+
+ALTER TABLE evaluacion
+DROP CONSTRAINT evaluacion_id_asignacion_foreign;
+
+ALTER TABLE evaluacion
+ADD CONSTRAINT evaluacion_id_asignacion_foreign
+FOREIGN KEY (id_asignacion)
+REFERENCES asignacion(id)
+ON DELETE SET NULL;	

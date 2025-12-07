@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ActividadController;
+use App\Http\Controllers\AreaNivelController;
 use App\Http\Controllers\AsignacionController;
 use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\ControlFaseController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\ImportacionesController;
 use App\Http\Controllers\ImportarEvaluadoresController;
 use App\Http\Controllers\ListarInscritosCotroller;
 use App\Http\Controllers\MedalleroController;
+use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\PersonaController;
 use App\Http\Controllers\PrepararEntornoFinalController;
 use App\Http\Controllers\UserInviteController;
@@ -40,18 +42,18 @@ Route::prefix('catalogos')->group(function () {
     Route::get('/', [CatalogoController::class, 'catalogos']);
 });
 
-Route::middleware(['auth:sanctum', 'role:administrador'])->group(function () {
-    Route::post('/responsable-academico', [ResponsableAcademicoController::class, 'store']);
-    Route::get('/responsable-academico', [ResponsableAcademicoController::class, 'index']);
-    Route::get('/responsable-academico/check', [ResponsableAcademicoController::class, 'check']);
-    Route::put('/responsable-academico/{id}', [ResponsableAcademicoController::class, 'update']);
-    Route::delete('/responsable-academico/{id}', [ResponsableAcademicoController::class, 'destroy']);
+Route::prefix('responsable-academico')->middleware(['auth:sanctum', 'role:administrador'])->group(function () {
+    Route::get('/', [ResponsableAcademicoController::class, 'index']);
+    Route::post('/', [ResponsableAcademicoController::class, 'store']);
+    Route::get('/check', [ResponsableAcademicoController::class, 'check']);
+    Route::put('/{id}', [ResponsableAcademicoController::class, 'update']);
+    Route::delete('/{id}', [ResponsableAcademicoController::class, 'destroy']);
 });
 
-Route::prefix('evaluador')->middleware(['auth:sanctum', 'role:administrador'])->group(function () {
-    Route::post('/', [EvaluadorController::class, 'store']);
+Route::prefix('evaluadores')->middleware(['auth:sanctum', 'role:administrador'])->group(function () {
     Route::get('/', [EvaluadorController::class, 'index']);
-    Route::get('/check', [EvaluadorController::class, 'check']);
+    Route::post('/', [EvaluadorController::class, 'store']);
+    Route::get('/check', action: [EvaluadorController::class, 'check']);
     Route::put('/{id}', [EvaluadorController::class, 'update']);
     Route::delete('/{id}', [EvaluadorController::class, 'destroy']);
     Route::post('/import/preview', [ImportarEvaluadoresController::class, 'preview']);
@@ -71,7 +73,7 @@ Route::prefix('fases')->group(function () {
 
     Route::get('/verificar/{nombreFase}', [FaseController::class, 'verificarFase']);
     Route::get('/{faseId}/actividades', [ActividadController::class, 'porFase']);
-
+    Route::put('{id}/publicacion', [EstadoController::class, 'publicarFaseCompleta']);
 });
 
 Route::prefix('actividades')->group(function () {
@@ -94,16 +96,17 @@ Route::prefix('competidores')->middleware(['auth:sanctum', 'role:administrador']
     Route::get('/exportar', [ListarInscritosCotroller::class, 'exportar']);
 });
 
-Route::prefix('evaluador')->middleware(['auth:sanctum'])->group(function () {
-    Route::get('/evaluaciones/exportar', [EvaluacionesController::class, 'exportarExcel']);
-    Route::get('/evaluaciones/{idAreaNivelFase}', [EvaluacionesController::class, 'index']);
-    Route::put('/evaluaciones/{id}', [EvaluacionesController::class, 'update']);
-
-    Route::get('/niveles', [EvaluacionesController::class, 'getEstadosAllFases']);
+Route::prefix('evaluaciones')->middleware(['auth:sanctum'])->group(function () {
+    Route::get('/mis-evaluaciones/exportar', [EvaluacionesController::class, 'exportarExcel']);
+    Route::get('/mis-evaluaciones/area-nivel-fase/{idAreaNivelFase}', [EvaluacionesController::class, 'index']);
+    Route::put('/{id}', [EvaluacionesController::class, 'update']);
+    Route::get('/', [EvaluacionesController::class, 'filtrar']);
+    Route::get('/mis-niveles', [EvaluacionesController::class, 'getEstadosAllFases']);
     Route::get('/niveles/{idFase}', [EvaluacionesController::class, 'getEstadosPorFase']);
-    Route::post('/evaluaciones/otorgar-aval/{idAreaNivelFase}', [EvaluacionesController::class, 'otorgarAval']);
-
+    Route::post('/otorgar-aval/{idAreaNivelFase}', [EvaluacionesController::class, 'otorgarAval']);
 });
+Route::get('/resultados', [EvaluacionesController::class, 'filtrar']);
+Route::get('/equipos/{id}/competidores', [EvaluacionesController::class, 'obtenerCompetidoresEquipo']);
 
 /* Route::get('send-mail', function () {
     $message = 'hello word';
@@ -123,6 +126,10 @@ Route::middleware(['auth:sanctum', 'role:administrador'])->group(function () {
     Route::get('/areas-fases', [EstadoController::class, 'getEstadosAreas']);
 });
 
+Route::prefix('area-nivel-fase')->group(function () {
+    Route::put('/{id}/estado', [EstadoController::class, 'actualizarEstadoAreaNivelFase']);
+    Route::put('/estado-publicado', [EstadoController::class, 'actualizarEstadoAreaNivelFaseTodos']);
+});
 Route::get('/test', function () {
     return response()->json([
         'status' => 'ok',
@@ -140,17 +147,25 @@ Route::post('/config-medallero/save-all', [MedalleroController::class, 'saveAll'
 
 
 //rutas para realizar la asignación
-
 Route::prefix('asignaciones')->group(function () {
-    Route::get('/', [AsignacionController::class, 'index']);
-    Route::get('/{areaNivelId}/evaluadores', [AsignacionController::class, 'verEvaluadores']);
-    Route::post('/{areaNivelId}/evaluadores', [AsignacionController::class, 'asignarEvaluadores']);
-    Route::delete('/{areaNivelId}/evaluadores', [AsignacionController::class, 'quitarEvaluadores']);
-    Route::get('/evaluadores/disponibles/{areaId}', [AsignacionController::class, 'evaluadoresDisponibles']);
-
-
-    Route::get('/evaluadores/disponibles/{areaId}', [AsignacionController::class, 'evaluadoresDisponibles']);
-    Route::post('/asignar-evaluadores', [AsignacionController::class, 'asignarInscritos']);
+    Route::post('/asignar-competidores', [AsignacionController::class, 'asignarInscritos']);
     Route::get('/evaluadores', [AsignacionController::class, 'listar']);
-
 });
+Route::prefix('area-nivel')->group(function () {
+    Route::get('/', [AreaNivelController::class, 'index']);
+    Route::get('/{id}', [AreaNivelController::class, 'show']);
+    Route::get('/{id}/evaluadores', [AreaNivelController::class, 'getEvaluadores']);
+    Route::post('/{id}/asignaciones', [AsignacionController::class, 'store']);
+    Route::delete('/{id}/asignaciones', [AsignacionController::class, 'destroy']);
+});
+
+Route::get('/actualizar-estados', [EstadoController::class, 'actualizarEstados']);
+
+//notificaciones
+Route::prefix('personas')->middleware(['auth:sanctum'])->group(function () {
+    Route::get('/notificaciones', [NotificacionController::class, 'getNotificaciones']);
+    Route::post('/notificaciones', [NotificacionController::class, 'enviar']);
+    Route::put('/notificaciones/{id_notificacion}', [NotificacionController::class, 'marcarComoLeida']);
+});
+
+

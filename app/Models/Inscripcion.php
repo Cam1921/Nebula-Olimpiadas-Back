@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property Tutor|null $tutor
  * @property Collection|Clasificacion[] $clasificacions
  * @property Collection|Evaluacion[] $evaluacions
+ * @property Collection|Ranking[] $rankings
  *
  * @package App\Models
  */
@@ -76,5 +77,10 @@ class Inscripcion extends Model
 	public function evaluacions()
 	{
 		return $this->hasMany(Evaluacion::class, 'id_inscripcion');
+	}
+
+	public function rankings()
+	{
+		return $this->hasMany(Ranking::class, 'id_inscripcion');
 	}
 }

@@ -38,4 +38,12 @@ class Area extends Model
 			->withPivot('id', 'id_olimpiada')
 			->withTimestamps();
 	}
+	public function responsable()
+	{
+		return $this->hasOneThrough(Persona::class, PersonaArea::class, 'id_area', 'id', 'id', 'id_persona')
+			->whereHas('rols', function ($q) {
+				$q->where('nombre', 'responsable'); // Ajusta tu nombre de rol
+			});
+	}
+
 }

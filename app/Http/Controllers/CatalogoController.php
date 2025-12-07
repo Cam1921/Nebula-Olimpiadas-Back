@@ -47,7 +47,9 @@ class CatalogoController extends Controller
             return [
                 'id' => $area->id,
                 'nombre' => $area->nombre_area,
+                'cantidad_evaluadores' => $area->cantidad_evaluadores,
                 'niveles' => $niveles
+
             ];
         });
 

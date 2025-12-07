@@ -27,7 +27,7 @@ class PersonaService
     {
         $usuario = $this->personaRepository->getById($id);
 
-        // 🔹 Validar existencia del usuario
+
         if (!$usuario) {
             return $this->errorResponse(
                 errorType: 'NOT_FOUND',
@@ -36,7 +36,7 @@ class PersonaService
             );
         }
 
-        // 🔹 Validar correo electrónico
+
         $email = $usuario->email;
         if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return $this->errorResponse(
@@ -67,24 +67,21 @@ class PersonaService
                 errors: [$e->getMessage()],
             );
         }
-        // 🔹 Generar token y preparar datos
 
-
-        // 🔹 Guardar la invitación
         try {
-            // 🔹 Intentar crear la invitación
+
             $invitacion = $this->invitacionRepository->create($data);
         } catch (\Illuminate\Database\QueryException $e) {
-            // 🔹 Detectar error por duplicado de email
-            if ($e->getCode() == '23000') { // Código SQL para violación de restricción UNIQUE
+
+            if ($e->getCode() == '23000') {
                 return $this->errorResponse(
                     errorType: 'DUPLICATE_EMAIL',
                     message: 'Ya existe una invitación para este correo electrónico.',
-                    code: 409 // 409 = Conflict
+                    code: 409
                 );
             }
 
-            // 🔹 Cualquier otro error de base de datos
+
             return $this->errorResponse(
                 errorType: 'DB_ERROR',
                 message: 'Error al registrar la invitación.',
@@ -93,7 +90,7 @@ class PersonaService
             );
         }
 
-        // 🔹 Intentar enviar el correo
+
         try {
             Mail::to($usuario->email)->send(new SendInviteEmail($usuario, $token));
 
@@ -103,7 +100,7 @@ class PersonaService
                 code: 200
             );
         } catch (\Exception $e) {
-            // 🔹 Registrar el error y retornar respuesta estandarizada
+
             Log::error('Error al enviar el correo: ' . $e->getMessage());
 
             return $this->errorResponse(
@@ -119,7 +116,7 @@ class PersonaService
 
 
         try {
-            // 🔹 Buscar si ya existe una invitación
+
             $invitacionExistente = $this->invitacionRepository->findById($id);
 
             if (!$invitacionExistente) {
@@ -131,7 +128,7 @@ class PersonaService
             }
             $usuario = $this->personaRepository->getByCorreo($invitacionExistente->email);
 
-            // 🔹 Validar existencia del usuario
+
             if (!$usuario) {
                 return $this->errorResponse(
                     errorType: 'NOT_FOUND',
@@ -148,13 +145,13 @@ class PersonaService
                     code: 400
                 );
             }
-            // 🔹 Generar nuevo token y actualizar la invitación
+
             $nuevoToken = Str::random(64);
             $invitacionExistente->token = $nuevoToken;
             $invitacionExistente->token_expira_en = now()->addHours(48);
             $invitacionExistente->save();
 
-            // 🔹 Enviar correo de nuevo
+
             Mail::to($email)->send(new SendInviteEmail($usuario, $nuevoToken));
 
             return $this->successResponse(

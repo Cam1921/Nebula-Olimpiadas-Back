@@ -21,9 +21,9 @@ class FaseController extends Controller
         try {
             $fases = $this->faseService->listarFases();
             if (!$fases) {
-                return response()->json(['state' => 'success', 'data' => [], 'message' => 'No hay fases disponibles'], 200);
+                return response()->json(['status' => 'success', 'data' => [], 'message' => 'No hay fases disponibles'], 200);
             }
-            return response()->json(['state' => 'success', 'data' => $fases, 'message' => 'Fases obtenidas correctamente'], 200);
+            return response()->json(['status' => 'success', 'data' => $fases, 'message' => 'Fases obtenidas correctamente'], 200);
         } catch (\Exception $e) {
             Log::error('Error al obtener las fases: ' . $e->getMessage());
             return response()->json(['error' => 'Error al obtener las fases'], 500);
@@ -38,9 +38,9 @@ class FaseController extends Controller
         try {
             $fase = $this->faseService->obtenerFase($id);
             if (!$fase) {
-                return response()->json(['state' => 'error', 'error' => 'Fase no encontrada'], 404);
+                return response()->json(['status' => 'error', 'error' => 'Fase no encontrada'], 404);
             }
-            return response()->json(['state' => 'success', 'data' => $fase, 'message' => 'Fase obtenida correctamente'], 200);
+            return response()->json(['status' => 'success', 'data' => $fase, 'message' => 'Fase obtenida correctamente'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -88,11 +88,10 @@ class FaseController extends Controller
         try {
             $fases = $this->faseService->obtenerFases();
             if (!$fases) {
-                return response()->json(['state' => 'success', 'data' => [], 'message' => 'No hay fases disponibles'], 200);
+                return response()->json(['status' => 'success', 'data' => [], 'message' => 'No hay fases disponibles'], 200);
             }
-            return response()->json(['state' => 'success', 'data' => $fases, 'message' => 'Fases obtenidas correctamente'], 200);
+            return response()->json(['status' => 'success', 'data' => $fases, 'message' => 'Fases obtenidas correctamente'], 200);
         } catch (\Exception $e) {
-            Log::error('Error al obtener las fases: ' . $e->getMessage());
             return response()->json(['error' => 'Error al obtener las fases'], 500);
         }
 
@@ -111,12 +110,12 @@ class FaseController extends Controller
                 ->update(['estado_publicado' => 'publicado']);
 
             return response()->json([
-                'state' => 'success',
+                'status' => 'success',
                 'message' => 'Todas las fases y actividades en borrador fueron publicadas.'
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'state' => 'error',
+                'status' => 'error',
                 'message' => 'Error al publicar: ' . $e->getMessage()
             ], 500);
         }

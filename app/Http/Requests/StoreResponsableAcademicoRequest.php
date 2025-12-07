@@ -21,8 +21,7 @@ class StoreResponsableAcademicoRequest extends FormRequest
             'email' => ['required', 'email:rfc,dns', 'max:70', 'unique:users,email'],
             'telefono' => ['required', 'string', 'size:8', 'regex:/^[67]\d{7}$/', 'unique:persona,telefono'],
             'ci' => ['required', 'string', 'min:6', 'max:10', 'regex:/^\d{6,10}$/', 'unique:persona,ci'],
-            'asignaciones' => ['required', 'array', 'min:1'],
-            'asignaciones.*.id_area' => ['required', 'integer', 'exists:area,id'],
+            'id_area' => ['required', 'integer', 'exists:area,id'],
         ];
     }
 
@@ -53,18 +52,16 @@ class StoreResponsableAcademicoRequest extends FormRequest
             'ci.regex' => 'El CI debe contener solo dígitos y tener entre 6 y 10 caracteres.',
             'ci.unique' => 'Este CI ya está registrado.',
 
-            'asignaciones.required' => 'Debes asignar al menos un área.',
-            'asignaciones.min' => 'Debes asignar al menos un área.',
-            'asignaciones.*.id_area.required' => 'Cada asignación debe tener un área.',
-            'asignaciones.*.id_area.integer' => 'El ID del área debe ser un número.',
-            'asignaciones.*.id_area.exists' => 'El área seleccionada no existe.',
+            'id_area.required' => 'Cada asignación debe tener un área.',
+            'id_area.integer' => 'El ID del área debe ser un número.',
+            'id_area.exists' => 'El área seleccionada no existe.',
         ];
     }
 
     protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(
-            response()->json(['errors' => $validator->errors()], 422)
+            response()->json(['status' => 'error', 'message' => 'Error de validación', 'errors' => $validator->errors()], 422)
         );
     }
 }

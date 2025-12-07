@@ -2,103 +2,103 @@
 
 namespace App\Http\Controllers;
 
+use App\Repositories\FaseRepository;
 use App\Services\ActividadService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Summary of ActividadController
+ */
 class ActividadController extends Controller
 {
     protected $actividadService;
-    public function __construct(ActividadService $actividadService)
+    protected $faseRepository;
+    /**
+     * Summary of __construct
+     * @param ActividadService $actividadService
+     */
+    public function __construct(ActividadService $actividadService, FaseRepository $faseRepository)
     {
         $this->actividadService = $actividadService;
+        $this->faseRepository = $faseRepository;
     }
+
+    /**
+     * Muestra la lista de actividades
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function index()
     {
-        try {
-            $actividares = $this->actividadService->listarActividades();
-            if (!$actividares) {
-                return response()->json([
-                    'status' => 'success',
-                    'data' => [],
-                    'message' => 'No hay actividades disponibles',
-
-                ], 200);
-            }
-            return response()->json([
-                'status' => 'success',
-                'data' => $actividares,
-                'message' => 'Actividades obtenidas correctamente',
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'error' => 'Error al obtener las actividades: ' . $e->getMessage(),
-            ], 500);
-        }
+        $res = $this->actividadService->listarActividades();
+        return response()->json($res['content'], $res['status_code']);
     }
+
+    /**
+     * Summary of store
+     * @param Request $request
+     * @return void
+     */
     public function store(Request $request)
     {
         //
     }
+
+    /**
+     * Summary of show
+     * @param mixed $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function show($id)
     {
-        try {
-            $actividad = $this->actividadService->obtenerActividad($id);
-            if (!$actividad) {
-                return response()->json(['state' => 'error', 'error' => 'Actividad no encontrada'], 404);
-            }
-            return response()->json(['state' => 'success', 'data' => $actividad, 'message' => 'Actividad obtenida correctamente'], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'error' => 'Error al obtener la actividad: ' . $e->getMessage(),
-            ], 500);
-        }
+        $res = $this->actividadService->obtenerActividad($id);
+        return response()->json($res['content'], $res['status_code']);
     }
+
+    /**
+     * Summary of update
+     * @param Request $request
+     * @param mixed $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function update(Request $request, $id)
     {
-        try {
-            $result = $this->actividadService->actualizarActividad($id, $request->all());
+        $res = $this->actividadService->actualizarActividad($id, $request->all());
+        return response()->json($res['content'], $res['status_code']);
 
-            return response()->json($result['content'], $result['status_code']);
-        } catch (ValidationException $e) {
-            return response()->json(['errors' => $e->errors()], 422);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
-        }
     }
+
+    /**
+     * Summary of destroy
+     * @param mixed $id
+     * @return void
+     */
     public function destroy($id)
     {
-
         //
     }
+
+    /**
+     * Summary of verificarActividad
+     * @param mixed $nombreFase
+     * @param mixed $nombreActividad
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function verificarActividad($nombreFase, $nombreActividad)
     {
-        return $this->actividadService->verificarActividadPorNombreYFase($nombreFase, $nombreActividad);
+        $res = $this->actividadService->verificarActividadPorNombreYFase($nombreFase, $nombreActividad);
+        return response()->json($res['content'], $res['status_code']);
     }
+
+    /**
+     * Summary of porFase
+     * @param mixed $faseId
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function porFase($faseId)
     {
-        try {
-            $actividades = $this->actividadService->getActividadesPorFase($faseId);
-            if (!$actividades) {
-                return response()->json([
-                    'status' => 'success',
-                    'data' => [],
-                    'message' => 'No hay actividades disponibles',
-
-                ], 200);
-            }
-            return response()->json([
-                'status' => 'success',
-                'data' => $actividades,
-                'message' => 'Actividades obtenidas correctamente por fase',
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'error' => 'Error al obtener las actividades por fase: ' . $e->getMessage(),
-            ], 500);
-        }
+        $res = $this->actividadService->getActividadesPorFase($faseId);
+        return response()->json($res['content'], $res['status_code']);
     }
 }

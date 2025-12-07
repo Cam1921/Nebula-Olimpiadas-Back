@@ -8,6 +8,7 @@ use App\Models\Evaluacion;
 use App\Models\Fase;
 use App\Models\Nivel;
 use App\Models\PersonaArea;
+use App\Services\AsignacionService;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Log;
@@ -15,169 +16,10 @@ use Illuminate\Support\Facades\Log;
 class AsignacionController extends Controller
 {
     use ApiResponseTrait;
-    public function index(Request $request)
+    protected $asignacionService;
+    public function __construct(AsignacionService $asignacionService)
     {
-        $idArea = $request->query('id_area');
-        $idNivel = $request->query('id_nivel');
-        $perPage = $request->query('per_page', 10);
-
-        $query = AreaNivel::withCount([
-            'asignacions as evaluadores_count' => function ($q) {
-                $q->whereHas('persona.rols', function ($r) {
-                    $r->where('nombre', 'evaluador'); // o por ID del rol
-                });
-            },
-            'inscripcions'
-        ])->with(['area', 'nivel']);
-
-        if ($idArea) {
-            $query->where('id_area', $idArea);
-        }
-
-        if ($idNivel) {
-            $query->where('id_nivel', $idNivel);
-        }
-
-        $areaNiveles = $query->paginate($perPage);
-
-        $items = collect($areaNiveles->items())->map(function ($item) {
-            return [
-                'id_area_nivel' => $item->id,
-                'area' => $item->area->nombre_area,
-                'nivel' => $item->nivel->nombre_nivel,
-                'total_evaluadores' => $item->evaluadores_count,
-                'total_competidores' => $item->inscripcions_count,
-            ];
-        });
-
-        return response()->json(
-            $this->successResponse(
-                'Áreas y niveles obtenidos correctamente.',
-
-                $items->toArray(),
-                [
-                    'current_page' => $areaNiveles->currentPage(),
-                    'per_page' => $areaNiveles->perPage(),
-                    'total' => $areaNiveles->total(),
-                    'last_page' => $areaNiveles->lastPage(),
-                    'next_page_url' => $areaNiveles->nextPageUrl(),
-                    'prev_page_url' => $areaNiveles->previousPageUrl(),
-                    'links' => $areaNiveles->linkCollection(),
-                ]
-            ),
-            200
-        );
-    }
-
-    public function verEvaluadores($areaNivelId)
-    {
-        Log::debug('AreaNivel ID: ' . $areaNivelId);
-        $areaNivel = AreaNivel::with([
-            'asignacions.persona.rols'
-        ])->find($areaNivelId);
-
-        if (!$areaNivel) {
-            return response()->json(['message' => 'AreaNivel no encontrado'], 404);
-        }
-
-        // Filtrar solo personas con rol Evaluador (id_rol = 3 EJEMPLO)
-        $evaluadores = $areaNivel->asignacions
-            ->filter(function ($asig) {
-                return $asig->persona->rols->contains('nombre', 'evaluador');
-            })
-            ->map(function ($asig) {
-                return [
-                    'id_asignacion' => $asig->id,
-                    'id_persona' => $asig->persona->id,
-                    'nombres' => $asig->persona->nombres,
-                    'apellidos' => $asig->persona->apellidos,
-                    'ci' => $asig->persona->ci,
-                    'email' => $asig->persona->email,
-                ];
-            })
-            ->values();
-
-        return response()->json([
-            'message' => 'Evaluadores encontrados',
-            'data' => $evaluadores
-        ], 200);
-    }
-    public function listaParaAgregar($areaId, $areaNivelId)
-    {
-        // Personas del área
-        $personasArea = PersonaArea::with(['persona.rols'])
-            ->where('id_area', $areaId)
-            ->get()
-            ->pluck('persona');
-
-        // Personas ya asignadas
-        $asignados = Asignacion::where('id_area_nivel', $areaNivelId)
-            ->pluck('id_persona');
-
-        // Filtrar: rol Evaluador + NO asignados
-        $disponibles = $personasArea
-            ->filter(function ($persona) use ($asignados) {
-                return
-                    $persona->rols->contains('nombre', 'Evaluador') &&
-                    !$asignados->contains($persona->id);
-            })
-            ->map(function ($p) {
-                return [
-                    'id_asignacion' => $p->asignacions->id,
-                    'id_persona' => $p->id,
-                    'nombres' => $p->nombres,
-                    'apellidos' => $p->apellidos,
-                    'ci' => $p->ci,
-                    'email' => $p->email,
-                ];
-            })
-            ->values();
-
-        return response()->json([
-            'message' => 'Personas disponibles para agregar',
-            'data' => $disponibles
-        ]);
-    }
-
-    public function asignarEvaluadores(Request $request, $areaNivelId)
-    {
-        $request->validate([
-            'evaluadores' => 'required|array',
-            'evaluadores.*' => 'integer|exists:persona,id'
-        ]);
-
-        $areaNivel = AreaNivel::find($areaNivelId);
-
-        if (!$areaNivel) {
-            return response()->json(['message' => 'AreaNivel no encontrado'], 404);
-        }
-
-        foreach ($request->evaluadores as $idPersona) {
-            Asignacion::firstOrCreate([
-                'id_persona' => $idPersona,
-                'id_area_nivel' => $areaNivelId
-            ]);
-        }
-
-        return response()->json(['message' => 'Evaluadores asignados correctamente']);
-    }
-    public function eliminarEvaluador($idAsignacion)
-    {
-        $asignacion = Asignacion::find($idAsignacion);
-
-        if (!$asignacion) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Asignación no encontrada.'
-            ], 404);
-        }
-
-        $asignacion->delete();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Evaluador eliminado correctamente.'
-        ]);
+        $this->asignacionService = $asignacionService;
     }
     public function asignarInscritos(Request $request)
     {
@@ -185,20 +27,22 @@ class AsignacionController extends Controller
             'id_area' => 'required|integer',
             'id_nivel' => 'required|integer',
             'limite_por_evaluador' => 'required|integer|min:1',
-            'cantidad_evaluadores' => 'required|integer|min:1' // NUEVO
+            'cantidad_evaluadores' => 'required|integer|min:1'
         ]);
 
         $idArea = $request->id_area;
         $idNivel = $request->id_nivel;
         $limite = $request->limite_por_evaluador;
-        $cantidadEvaluadores = $request->cantidad_evaluadores; // NUEVO
+        $cantidadEvaluadores = $request->cantidad_evaluadores;
 
-        $faseActiva = Fase::where('estado', 'activo')->first();
+        $faseActiva = Fase::where('estado', 'activa')
+            ->whereIn('nombre', ['clasificacion', 'final'])
+            ->first();
 
         if (!$faseActiva) {
             return response()->json([
                 'state' => 'error',
-                'message' => 'No existe una fase activa.'
+                'message' => 'No existe una fase activa o no corresponde a las fases de clasificación o final.'
             ], 400);
         }
 
@@ -335,7 +179,7 @@ class AsignacionController extends Controller
         }
 
         // Buscar fase ACTIVA
-        $faseActiva = Fase::where('estado', 'activo')->first();
+        $faseActiva = Fase::where('estado', 'activa')->first();
 
         if (!$faseActiva) {
             return response()->json([
@@ -414,4 +258,18 @@ class AsignacionController extends Controller
         ]);
     }
 
+
+    public function store(Request $request, $idAreaNivel)
+    {
+        $evaluadores = $request->input('evaluadores');
+        $res = $this->asignacionService->asignarEvaluadores($evaluadores, $idAreaNivel);
+        return response()->json($res['content'], $res['status_code']);
+    }
+
+    public function destroy(Request $request, $idAreaNivel)
+    {
+        $evaluadores = $request->input('asignaciones');
+        $res = $this->asignacionService->eliminarEvaluadores($evaluadores, $idAreaNivel);
+        return response()->json($res['content'], $res['status_code']);
+    }
 }

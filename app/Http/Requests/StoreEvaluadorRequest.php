@@ -21,9 +21,8 @@ class StoreEvaluadorRequest extends FormRequest
             'ci' => ['required', 'numeric', 'unique:persona,ci'],
             'telefono' => ['required', 'string', 'size:8', 'regex:/^[67]\d{7}$/', 'unique:persona,telefono'],
             'email' => ['required', 'email', 'unique:users,email'],
-            'asignaciones' => ['required', 'array', 'min:1'],
-            'asignaciones.*.id_area' => ['required', 'integer', 'exists:area,id'],
-            'asignaciones.*.id_nivel' => ['nullable', 'integer', 'exists:nivel,id'],
+            'id_area' => ['required', 'integer', 'exists:area,id'],
+
         ];
     }
 
@@ -51,13 +50,10 @@ class StoreEvaluadorRequest extends FormRequest
             'email.email' => 'El correo debe tener un formato válido.',
             'email.unique' => 'Este correo ya está registrado.',
 
-            'asignaciones.required' => 'Debe asignar al menos una asignación.',
-            'asignaciones.array' => 'Las asignaciones deben ser un arreglo.',
-            'asignaciones.*.id_area.required' => 'El área es obligatoria para cada asignación.',
-            'asignaciones.*.id_area.integer' => 'El ID del área debe ser un número.',
-            'asignaciones.*.id_area.exists' => 'El área seleccionada no existe.',
-            'asignaciones.*.id_nivel.integer' => 'El ID del nivel debe ser un número.',
-            'asignaciones.*.id_nivel.exists' => 'El nivel seleccionado no existe.',
+            'id_area.required' => 'El área es obligatoria para cada asignación.',
+            'id_area.integer' => 'El ID del área debe ser un número.',
+            'id_area.exists' => 'El área seleccionada no existe.',
+
         ];
     }
 
@@ -65,6 +61,7 @@ class StoreEvaluadorRequest extends FormRequest
     {
         throw new HttpResponseException(
             response()->json([
+                'status' => 'error',
                 'message' => 'Error de validación',
                 'errors' => $validator->errors()
             ], 422)

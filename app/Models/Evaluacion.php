@@ -75,4 +75,16 @@ class Evaluacion extends Model
 	{
 		return $this->belongsTo(Asignacion::class, 'id_asignacion');
 	}
+
+	public function evaluador()
+	{
+		return $this->hasOneThrough(
+			Persona::class,
+			Asignacion::class,
+			'id',
+			'id',
+			'id_asignacion',
+			'id_persona'
+		);
+	}
 }

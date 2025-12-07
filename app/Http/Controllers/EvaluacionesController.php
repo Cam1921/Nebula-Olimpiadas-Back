@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Exports\EvaluacionesExport;
 use App\Exports\ListaResultadosExport;
+use App\Models\AreaNivelFase;
+use App\Models\Equipo;
 use App\Models\Evaluacion;
 use App\Repositories\EvaluacionRepository;
 use App\Services\EvaluacionesService;
@@ -102,49 +104,23 @@ class EvaluacionesController extends Controller
      *     )
      * )
      */
+
+    /**
+     * Summary of index
+     * @param Request $request
+     * @param mixed $idAreaNivelFase
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function index(Request $request, $idAreaNivelFase)
     {
-        try {
-            $idEvaluador = auth()->guard('sanctum')->user()->personas()->first()->id;
-            $perPage = $request->query('perPage', 10);
-            $page = $request->query('page', 1);
-            $busqueda = $request->query('busqueda', null);
-            $estado_clasificado = $request->query('estado_clasificado', null);
-            $ordenarPor = $request->query('ordenar_por', 'id');
-            $direccion = $request->query('direccion', 'asc');
-            $evaluaciones = $this->evaluacionesService->obtenerEvaluacionesPorEvaluador($idEvaluador, $idAreaNivelFase, $busqueda, $perPage, $page, $estado_clasificado, $ordenarPor, $direccion);
-            Log::debug('Obteniendo evaluaciones para evaluador', ['request' => $request, 'direccion' => $direccion, 'ordenarPor' => $ordenarPor, 'estado_clasificado' => $estado_clasificado, 'busqueda' => $busqueda, 'perPage' => $perPage, 'page' => $page, 'idEvaluador' => $idEvaluador, 'idAreaNivelFase' => $idAreaNivelFase]);
-            return response()->json(
-                $this->successResponse(
-                    'Evaluaciones obtenidas correctamente.',
-                    $evaluaciones->items(),
-                    [
-                        'current_page' => $evaluaciones->currentPage(),
-                        'per_page' => $evaluaciones->perPage(),
-                        'total' => $evaluaciones->total(),
-                        'last_page' => $evaluaciones->lastPage(),
-                        'next_page_url' => $evaluaciones->nextPageUrl(),
-                        'prev_page_url' => $evaluaciones->previousPageUrl(),
-                        'links' => $evaluaciones->linkCollection(),
-                    ]
-                ),
-                200
-            );
-
-        } catch (\Exception $e) {
-
-            $code = str_contains($e->getMessage(), 'No se encontraron') ? 404 : 500;
-
-            return response()->json(
-                $this->errorResponse(
-                    'ServerError',
-                    $e->getMessage(),
-                    [],
-                    $code
-                ),
-                $code
-            );
-        }
+        $perPage = $request->query('perPage', 10);
+        $page = $request->query('page', 1);
+        $busqueda = $request->query('busqueda', null);
+        $estado_clasificado = $request->query('estado_clasificado', null);
+        $ordenarPor = $request->query('ordenar_por', 'id');
+        $direccion = $request->query('direccion', 'asc');
+        $res = $this->evaluacionesService->obtenerEvaluaciones($idAreaNivelFase, $busqueda, $perPage, $page, $estado_clasificado, $ordenarPor, $direccion);
+        return response()->json($res['content'], $res['status_code']);
     }
 
     /**
@@ -225,80 +201,50 @@ class EvaluacionesController extends Controller
      * )
      */
 
-
+    /**
+     * Summary of filtrar
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function filtrar(Request $request)
     {
-        $evaluaciones = $this->evaluacionesService->filtrarEvaluaciones($request->all());
+        $publicado = $request->query('esPublicado', false);
+        $estado = $request->query('estado', null);
+        $perPage = $request->query('perPage', 10);
+        $id_fase = $request->query('id_fase', null);
+        $id_area = $request->query('id_area', null);
+        $id_nivel = $request->query('id_nivel', null);
+        $nivelNombre = $request->query('nivel_nombre', null);
+        $page = $request->query('page', 1);
+        $busqueda = $request->query('busqueda', null);
+        $estado_clasificado = $request->query('estado_clasificado', null);
+        $ordenarPor = $request->query('ordenar_por', 'nombre');
+        $direccion = $request->query('direccion', 'asc');
+        /* $res = $this->evaluacionesService->filtrarEvaluaciones($nivelNombre, $id_area, $id_nivel, $id_fase, $busqueda, $perPage, $page, $estado_clasificado, $ordenarPor, $direccion); */
+        $res = $this->evaluacionesService->filtrarEvaluaciones($publicado, $estado, $nivelNombre, $id_fase, $id_area, $id_nivel, $busqueda, $perPage, $page, $estado_clasificado, $ordenarPor, $direccion);
+        /* $res = $this->evaluacionesService->filtrarEvaluacionesRanking($nivelNombre, $id_fase, $id_area, $id_nivel, $busqueda, $perPage, $page, $estado_clasificado, $ordenarPor, $direccion); */
 
-        return response()->json(
-            $this->successResponse(
-                'Evaluaciones obtenidas correctamente.',
-                $evaluaciones->items(),
-                [
-                    'current_page' => $evaluaciones->currentPage(),
-                    'per_page' => $evaluaciones->perPage(),
-                    'total' => $evaluaciones->total(),
-                    'last_page' => $evaluaciones->lastPage(),
-                    'next_page_url' => $evaluaciones->nextPageUrl(),
-                    'prev_page_url' => $evaluaciones->previousPageUrl(),
-                    'links' => $evaluaciones->linkCollection(),
-                ]
-            ),
-            200
-        );
+
+        return response()->json($res['content'], $res['status_code']);
     }
 
+    /**
+     * Summary of update
+     * @param Request $request
+     * @param mixed $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function update(Request $request, $id)
     {
-
-        try {
-            $request->validate([
-                'nota' => 'nullable|numeric|min:0|max:100',
-                'descripcion' => 'nullable|string|max:500',
-                'conducta.respeto' => 'nullable|boolean',
-                'conducta.integridad' => 'nullable|boolean',
-                'conducta.puntualidad' => 'nullable|boolean',
-                'estado_confirmacion' => 'nullable|string',
-                'observacion' => 'nullable|string|max:500',
-            ], [
-                'nota.required' => 'La nota es obligatoria.',
-                'nota.numeric' => 'La nota debe ser un número.',
-                'nota.min' => 'La nota no puede ser menor a 0.',
-                'nota.max' => 'La nota no puede ser mayor a 100.',
-            ]);
-
-            // Obtener id del evaluador desde auth
-            $evaluadorId = auth()->guard('sanctum')->user()->id;
-
-            // Obtener IP del cliente
-            $ip = $request->ip();
-
-            $evaluacion = $this->evaluacionesService->actualizarEvaluacion($id, $request->all(), $evaluadorId, $ip);
-
-            return response()->json(
-
-                $this->successResponse(
-                    'Evaluación actualizada correctamente.',
-                    [$evaluacion]
-                )
-            );
-
-        } catch (\Exception $e) {
-
-            $code = str_contains($e->getMessage(), 'No se encontró') ? 404 : 500;
-
-            return response()->json(
-                $this->errorResponse(
-                    'ServerError',
-                    $e->getMessage(),
-                    [],
-                    $code
-                ),
-                $code
-            );
-        }
-
+        $res = $this->evaluacionesService->actualizarEvaluacion($request, $id);
+        return response()->json($res['content'], $res['status_code']);
     }
+
+    /**
+     * Summary of exportarExcel
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse|\Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
     public function exportarExcel(Request $request)
     {
         try {
@@ -313,7 +259,7 @@ class EvaluacionesController extends Controller
 
             $idEvaluador = $persona->id;
             $busqueda = $request->query('busqueda', null);
-            $estado_clasificado = $request->query('estado_clasificado', null);
+            $estado_clasificado = $request->query('estado_clasificado', 'todos');
             $ordenarPor = $request->query('ordenar_por', 'id');
             $direccion = $request->query('direccion', 'asc');
 
@@ -323,13 +269,6 @@ class EvaluacionesController extends Controller
             if ($idAreaNivelFase !== null) {
                 $idAreaNivelFase = (int) $idAreaNivelFase;
             }
-
-            Log::debug('Exportando Excel para evaluador', [
-                'idEvaluador' => $idEvaluador,
-                'idAreaNivelFase' => $idAreaNivelFase,
-                'busqueda' => $busqueda,
-                'estado_clasificado' => $estado_clasificado
-            ]);
 
             return Excel::download(
                 new EvaluacionesExport($idEvaluador, $busqueda, $estado_clasificado, $idAreaNivelFase, $ordenarPor, $direccion),
@@ -349,114 +288,85 @@ class EvaluacionesController extends Controller
         }
     }
 
-
-
+    /**
+     * Summary of getEstadosAllFases
+     * @return array
+     */
     public function getEstadosAllFases()
     {
         $evaluadorId = auth()->guard('sanctum')->user()->personas()->first()->id;
         return $this->evaluacionesService->getEstadosByEvaluador($evaluadorId);
     }
 
-
+    /**
+     * Summary of getEstadosPorFase
+     * @param mixed $faseId
+     * @return array
+     */
     public function getEstadosPorFase($faseId)
     {
         $evaluadorId = auth()->guard('sanctum')->user()->personas()->first()->id;
         return $this->evaluacionesService->getEstadosByEvaluador($evaluadorId, $faseId);
     }
 
+    /**
+     * Summary of aprobarClasificados
+     * @param mixed $idAreaNivelFase
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function aprobarClasificados($idAreaNivelFase)
     {
-        try {
-            // Obtener todas las evaluaciones "Clasificado" de esa fase
-            $evaluaciones = Evaluacion::where('id_area_nivel_fase', $idAreaNivelFase)
-                ->where('estado_confirmacion', 'pendiente')
-                ->where('estado_clasificado', 'Clasificado')
-                ->get();
-
-            foreach ($evaluaciones as $evaluacion) {
-                $evaluacion->estado_confirmacion = 'aprobado';
-                $evaluacion->observacion = 'Ninguno';
-                $evaluacion->save();
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Aval otorgado correctamente a los clasificados.',
-                'total_aprobados' => $evaluaciones->count(),
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al otorgar aval: ' . $e->getMessage(),
-            ], 500);
-        }
+        $res = $this->evaluacionesService->aprobarClasificadosEvaluador($idAreaNivelFase);
+        return response()->json($res['content'], $res['status_code']);
     }
+    /**
+     * Summary of otorgarAval
+     * @param mixed $idAreaNivelFase
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function otorgarAval($idAreaNivelFase)
     {
-        try {
-            // Obtener las evaluaciones relacionadas al área_nivel_fase indicado
-            $evaluaciones = Evaluacion::whereHas('inscripcion.area_nivel.area_nivel_fase', function ($query) use ($idAreaNivelFase) {
-                $query->where('id', $idAreaNivelFase);
-            })
-
-                ->get();
-
-            // Si no hay evaluaciones, devolver mensaje 404
-            if ($evaluaciones->isEmpty()) {
-                \Log::warning("No se encontraron evaluaciones clasificadas para el AreaNivelFase ID: $idAreaNivelFase");
-                return response()->json([
-                    'message' => 'No se encontraron evaluaciones clasificadas para este área-nivel-fase'
-                ], 404);
-            }
-
-            // Actualizar cada evaluación
-            foreach ($evaluaciones as $evaluacion) {
-                $evaluacion->update([
-                    'estado_confirmacion' => 'aprobado',
-                    'observacion' => 'Aval otorgado automáticamente'
-                ]);
-            }
-
-            // Cambiar el estado del área_nivel_fase a "confirmado"
-            $areaNivelFase = \App\Models\AreaNivelFase::find($idAreaNivelFase);
-            if ($areaNivelFase) {
-                $areaNivelFase->update(['estado' => 'confirmado']);
-            } else {
-                \Log::warning("AreaNivelFase ID $idAreaNivelFase no encontrado al intentar confirmar");
-            }
-
-            return response()->json([
-                'message' => 'Avales otorgados correctamente y área-nivel-fase confirmado',
-                'total_avales' => $evaluaciones->count()
-            ]);
-        } catch (\Exception $e) {
-            \Log::error("Error en otorgarAval: " . $e->getMessage());
-            return response()->json([
-                'message' => 'Error al otorgar aval',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        $res = $this->evaluacionesService->otorgarAvalResponsable($idAreaNivelFase);
+        return response()->json($res['content'], $res['status_code']);
     }
 
+    /**
+     * Summary of exportarEvaluaciones
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
     public function exportarEvaluaciones(Request $request)
     {
-        $filtros = $request->only([
-            'id_fase',
-            'id_area',
-            'id_nivel',
-            'nivel_nombre',
-            'busqueda',
-            'estado_clasificado'
-        ]);
+        $res = app(EvaluacionesService::class)->filtrarEvaluaciones(
+            $request->esPublicado ?? false,
+            $request->estado ?? null,
+            $request->nivel_nombre ?? null,
+            $request->id_fase ?? null,
+            $request->id_area ?? null,
+            $request->id_nivel ?? null,
+            $request->busqueda ?? null,
+            99999,
+            1,
+            $request->estado_clasificado ?? null,
+            $request->ordenar_por ?? 'nombre',
+            $request->direccion ?? 'asc',
+        );
+        $datos = $res['content']['data'];
+        $estado = $request->estado ?? null;
 
-        $evaluaciones = app(EvaluacionesService::class)
-            ->filtrarEvaluaciones(array_merge($filtros, ['per_page' => 99999, 'page' => 1]));
 
-        $datos = $evaluaciones->getCollection();
-
-        return Excel::download(new ListaResultadosExport($datos), 'evaluaciones_filtradas.xlsx');
+        return Excel::download(new ListaResultadosExport($datos, $estado), 'evaluaciones_filtradas.xlsx');
     }
 
+    /**
+     * Summary of obtenerCompetidoresEquipo
+     * @param mixed $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function obtenerCompetidoresEquipo($id)
+    {
+        $res = $this->evaluacionesService->obtenerCompetidoresEquipo($id);
+        return response()->json($res['content'], $res['status_code']);
+    }
 
 }

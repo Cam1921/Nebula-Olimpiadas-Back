@@ -29,7 +29,14 @@ class FaseService
         if (!$fases) {
             throw new \Exception('No se encontraron fases.');
         }
-        return $fases;
+        $data = $fases->map(function ($f) {
+            return [
+                "id" => $f->id,
+                "nombre" => $f->nombre,
+                "estado" => $f->estado
+            ];
+        });
+        return $data;
     }
     public function obtenerFases()
     {
@@ -135,7 +142,6 @@ class FaseService
         // *************** VALIDAR COLISIONES ENTRE FASES ***************
         $orden = [
             'inscripcion' => 1,
-            'clasificación' => 2,
             'clasificacion' => 2,
             'final' => 3,
         ];
