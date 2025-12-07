@@ -257,7 +257,7 @@ class EvaluadorController extends Controller
 
         try {
 
-            $validated = $request->validate([
+            $request->validate([
                 'nombre' => 'sometimes|string|min:2',
                 'apellidos' => 'sometimes|string|min:2',
                 'ci' => "sometimes|numeric|unique:persona,ci,{$id},id",
@@ -283,8 +283,6 @@ class EvaluadorController extends Controller
                 'email.email' => 'Debe ingresar un correo electrónico válido.',
                 'email.unique' => 'Este correo electrónico ya está registrado.',
 
-
-
                 'id_area.required_with' => 'Debe indicar el área en cada asignación.',
                 'id_area.integer' => 'El ID del área debe ser un número válido.',
                 'id_area.exists' => 'El área seleccionada no existe.',
@@ -296,37 +294,38 @@ class EvaluadorController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         }
+        Log::debug('Iniciando control de duplicados', [$request->all()]);
         try {
-            return DB::transaction(function () use ($validated, $persona) {
-
-
-                $persona->update([
-                    'nombres' => $validated['nombre'] ?? $persona->nombres,
-                    'apellidos' => $validated['apellidos'] ?? $persona->apellidos,
-                    'ci' => $validated['ci'] ?? $persona->ci,
-                    'telefono' => $validated['telefono'] ?? $persona->telefono,
-                    'email' => $validated['email'] ?? $persona->email,
-                ]);
-
-
-                if ($persona->user && isset($validated['email'])) {
-                    $oldEmail = $persona->email;
-
-                    $persona->user->update([
-                        'email' => $validated['email'],
+            return DB::transaction(function () use ($request, $persona) {
+                $oldEmail = $persona->email;
+                $data = $request->only(['nombre', 'apellidos', 'ci', 'telefono', 'email']);
+                if (!empty($data)) {
+                    $persona->update([
+                        'nombres' => $data['nombre'] ?? $persona->nombres,
+                        'apellidos' => $data['apellidos'] ?? $persona->apellidos,
+                        'ci' => $data['ci'] ?? $persona->ci,
+                        'telefono' => $data['telefono'] ?? $persona->telefono,
+                        'email' => $data['email'] ?? $persona->email,
                     ]);
-
-
-                    $invitacion = Invitacion::where('email', $oldEmail)->first();
-                    if ($invitacion) {
-                        $invitacion->update(['email' => $validated['email']]);
+                }
+                if ($persona->user) {
+                    $userData = [];
+                    if ($request->filled('email')) {
+                        $userData['email'] = $request->email;
+                    }
+                    if (!empty($userData)) {
+                        $persona->user->update($userData);
+                    }
+                    if ($request->filled('email') && $oldEmail !== $request->email) {
+                        $invitacion = Invitacion::where('email', $oldEmail)->first();
+                        if ($invitacion) {
+                            $invitacion->update(['email' => $request->email]);
+                        }
                     }
                 }
-
-                if (isset($validated['id_area'])) {
+                if ($request->filled('id_area')) {
 
                     try {
-
                         $persona->asignacions()->delete();
                         $persona->persona_areas()->delete();
                     } catch (\Throwable $th) {
@@ -335,20 +334,20 @@ class EvaluadorController extends Controller
                             'error' => 'error al eliminar la asignación.'
                         ], 422);
                     }
-
-                    $area = Area::where('id', $validated['id_area'])->first();
+                    $area = $request->only(['id_area']);
+                    $Areaexists = Area::find($area['id_area']);
 
                     Log::debug('area', [$area]);
 
-                    if (!$area) {
+                    if (!$Areaexists) {
                         return response()->json([
                             'status' => 'error',
                             'error' => 'Área no existen en la tabla area.'
                         ], 422);
                     }
 
-                    $asignacionesArea = PersonaArea::where('id_area', $area->id)->count();
-                    $cantidadEvalArea = $area->cantidad_evaluadores;
+                    $asignacionesArea = PersonaArea::where('id_area', $Areaexists->id)->count();
+                    $cantidadEvalArea = $Areaexists->cantidad_evaluadores;
                     Log::debug('asignacionesArea', [$asignacionesArea, $cantidadEvalArea]);
 
                     if ($asignacionesArea >= $cantidadEvalArea) {
@@ -359,7 +358,7 @@ class EvaluadorController extends Controller
                     }
 
                     $persona->persona_areas()->create([
-                        'id_area' => $area->id,
+                        'id_area' => $Areaexists->id,
                     ]);
                 }
                 $persona->load(['user', 'persona_areas.area']);

@@ -57,9 +57,12 @@ class ReclamoEvaluacion extends Notification
             'responsable' => $this->data['responsable'],
             'area' => $this->data['area'],
             'nivel' => $this->data['nivel'],
+            'id_nivel' => $this->data['id_nivel'],
             'nombre_competidor' => $this->data['nombre_competidor'],
             'ci_competidor' => $this->data['ci_competidor'],
             'motivo' => $this->data['motivo'],
+            'id_areaNivelFase' => $this->data['id_area_nivel_fase'],
+            'estado_aeraNivelFase' => $this->data['estado_area_nivel_fase']
         ];
 
     }

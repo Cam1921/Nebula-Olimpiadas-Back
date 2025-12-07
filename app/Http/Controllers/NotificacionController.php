@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AreaNivelFase;
 use App\Models\Asignacion;
 use App\Models\Evaluacion;
 use App\Models\Persona;
@@ -69,7 +70,6 @@ class NotificacionController extends Controller
             'area' => 'required|string',
             'nivel' => 'required|string',
             'motivo' => 'required|string'
-
         ]);
 
         $usuario = Auth::user();
@@ -80,7 +80,7 @@ class NotificacionController extends Controller
             ], 401);
         }
 
-        // Obtener la persona responsable
+        // Responsable que envía la notificación
         $responsable = Persona::where('id_usuario', $usuario->id)->first();
         if (!$responsable) {
             return response()->json([
@@ -89,18 +89,42 @@ class NotificacionController extends Controller
             ], 404);
         }
 
-        // Obtener evaluación y asignación
+        // Evaluación
         $evaluacion = Evaluacion::find($request->id_evaluacion);
+        $fase = $evaluacion->fase;
+
+        // Buscar correctamente el area_nivel_fase
+        $areaNivelFase = AreaNivelFase::where('id_fase', $fase->id)
+            ->whereHas('area_nivel.nivel', function ($q) use ($request) {
+                $q->where('nombre_nivel', $request->nivel);
+            })
+            ->whereHas('area_nivel.area', function ($q) use ($request) {
+                $q->where('nombre_area', $request->area);
+            })
+            ->first();
+
+        if (!$areaNivelFase) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se encontró area_nivel_fase correspondiente'
+            ], 404);
+        }
+
+        // Persona que recibirá la notificación (evaluador)
         $asignacion = Asignacion::find($evaluacion->id_asignacion);
         $persona = $asignacion->persona;
 
+        // DATA REAL que se enviará a la notificación
         $data = [
             'responsable' => $responsable->nombres . ' ' . $responsable->apellidos,
             'nombre_competidor' => $request->nombre_competidor,
             'ci_competidor' => $request->ci_competidor,
             'area' => $request->area,
             'nivel' => $request->nivel,
-            'motivo' => $request->motivo
+            'id_nivel' => $areaNivelFase->area_nivel->nivel->id,
+            'motivo' => $request->motivo,
+            'id_area_nivel_fase' => $areaNivelFase->id,
+            'estado_area_nivel_fase' => $areaNivelFase->estado,
         ];
 
         // Enviar notificación
@@ -111,5 +135,6 @@ class NotificacionController extends Controller
             'message' => 'Notificación enviada correctamente'
         ]);
     }
+
 
 }

@@ -85,7 +85,6 @@ class ListaResultadosExport implements FromCollection, WithHeadings
             ];
         } else {
             return [
-                'Puesto',
                 'Nombre del Competidor',
                 'Área de Participación',
                 'Nivel',

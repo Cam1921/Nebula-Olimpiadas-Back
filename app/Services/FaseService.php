@@ -29,14 +29,7 @@ class FaseService
         if (!$fases) {
             throw new \Exception('No se encontraron fases.');
         }
-        $data = $fases->map(function ($f) {
-            return [
-                "id" => $f->id,
-                "nombre" => $f->nombre,
-                "estado" => $f->estado
-            ];
-        });
-        return $data;
+        return $fases;
     }
     public function obtenerFases()
     {
@@ -70,7 +63,7 @@ class FaseService
     public function actualizarFase($id, array $data)
     {
         $fase = $this->faseRepository->findById($id);
-        $todasLasFases = $this->listarFases();
+        $todasLasFases = $this->obtenerFases();
 
         if (!$fase) {
             return [

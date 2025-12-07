@@ -247,6 +247,7 @@ class ResponsableService
         try {
 
             return DB::transaction(function () use ($request, $persona) {
+                $oldEmail = $persona->email;
                 $data = $request->only(['nombre', 'apellidos', 'ci', 'telefono', 'email']);
                 if (!empty($data)) {
                     $persona->update([
@@ -265,8 +266,8 @@ class ResponsableService
                     if (!empty($userData)) {
                         $persona->user->update($userData);
                     }
-                    if ($request->filled('email') && $persona->email !== $request->email) {
-                        $invitacion = Invitacion::where('email', $persona->email)->first();
+                    if ($request->filled('email') && $oldEmail !== $request->email) {
+                        $invitacion = Invitacion::where('email', $oldEmail)->first();
                         if ($invitacion) {
                             $invitacion->update(['email' => $request->email]);
                         }

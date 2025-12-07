@@ -694,10 +694,6 @@ class EvaluacionesService
                 $publicado
             )->orderBy('puesto_oficial', 'asc');
             ;
-
-
-
-
             $allData = $query->get()->map(function ($eva) {
 
 

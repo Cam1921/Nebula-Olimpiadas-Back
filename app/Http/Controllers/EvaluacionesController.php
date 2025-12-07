@@ -223,8 +223,6 @@ class EvaluacionesController extends Controller
         /* $res = $this->evaluacionesService->filtrarEvaluaciones($nivelNombre, $id_area, $id_nivel, $id_fase, $busqueda, $perPage, $page, $estado_clasificado, $ordenarPor, $direccion); */
         $res = $this->evaluacionesService->filtrarEvaluaciones($publicado, $estado, $nivelNombre, $id_fase, $id_area, $id_nivel, $busqueda, $perPage, $page, $estado_clasificado, $ordenarPor, $direccion);
         /* $res = $this->evaluacionesService->filtrarEvaluacionesRanking($nivelNombre, $id_fase, $id_area, $id_nivel, $busqueda, $perPage, $page, $estado_clasificado, $ordenarPor, $direccion); */
-
-
         return response()->json($res['content'], $res['status_code']);
     }
 

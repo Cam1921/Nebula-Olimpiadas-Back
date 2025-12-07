@@ -3,19 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreResponsableAcademicoRequest;
-use App\Models\Area;
-use App\Models\AreaNivel;
-use App\Models\Asignacion;
-use App\Models\Invitacion;
 use App\Models\Persona;
-use App\Models\Rol;
 use App\Models\User;
 use App\Repositories\InvitacionRepository;
 use App\Services\EvaluadoresService;
 use App\Services\PersonaService;
 use App\Services\ResponsableService;
-use DB;
-
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 

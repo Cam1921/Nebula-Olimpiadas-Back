@@ -16,6 +16,10 @@ class FaseController extends Controller
         $this->faseService = $faseService;
     }
 
+    /**
+     * Summary of index
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function index()
     {
         try {
