@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AreaNivelFase;
+use App\Models\CertificadoLog;
 use App\Models\Competidor;
 use App\Models\Equipo;
 use App\Models\Evaluacion;
@@ -557,7 +558,7 @@ class EvaluacionesService
         if ($estado === "certificados") {
             return $this->filtrarEvaluacionesCertificados(
                 $nivelNombre,
-                $id_fase,
+
                 $id_area,
                 $id_nivel,
                 $busqueda,
@@ -569,7 +570,6 @@ class EvaluacionesService
         } else if ($estado === "ceremonia") {
             return $this->filtrarEvaluacionesCeremonia(
                 $nivelNombre,
-                $id_fase,
                 $id_area,
                 $id_nivel,
                 $busqueda,
@@ -585,7 +585,6 @@ class EvaluacionesService
     }
     public function filtrarEvaluacionesCeremonia(
         $nivelNombre,
-        $idFase,
         $idArea,
         $idNivel,
         $busqueda,
@@ -596,18 +595,29 @@ class EvaluacionesService
         try {
             $query = $this->baseQueryEvaluaciones(
                 $nivelNombre,
-                $idFase,
                 $idArea,
                 $idNivel,
                 $busqueda,
                 $publicado
             )->orderBy('puesto_oficial', 'asc');
             ;
+
             $allData = $query->get()->map(function ($eva) {
+                Log::debug("asdfasdf", [$eva]);
                 $areaNivelId = $eva->inscripcion->area_nivel->id;
 
                 $config = \App\Models\ConfigMedallero::where('id_area_nivel', $areaNivelId)->first();
+                $certificado = CertificadoLog::where('id_inscripcion', $eva->id_inscripcion)->first();
+                $estado_certificado = "Pendiente";
+                $certificado = CertificadoLog::where('id_inscripcion', $eva->id_inscripcion)->first();
+                $estado_certificado = "Pendiente";
 
+                if ($certificado) {
+                    $estado_certificado = "Generado";
+                }
+                if ($certificado) {
+                    $estado_certificado = "Generado";
+                }
                 $premio = null;
 
                 if ($config && $eva->puesto_oficial) {
@@ -634,12 +644,14 @@ class EvaluacionesService
                     return;
                 return [
                     'id_ranking' => $eva->id,
+                    'id_inscrito' => $eva->id_inscripcion,
                     'nombre_completo' => $eva->inscripcion->competidor->nombres . ' ' . $eva->inscripcion->competidor->apellidos,
                     'unidad_educativa' => $eva->inscripcion->competidor->institucion->nombre_institucion,
                     'area' => $eva->inscripcion->area_nivel->area->nombre_area,
                     'nivel' => $eva->inscripcion->area_nivel->nivel->nombre_nivel,
                     'puesto' => $eva->puesto_oficial,
-                    'premio' => $premio
+                    'premio' => $premio,
+                    'estado' => $estado_certificado
                 ];
 
 
@@ -674,7 +686,6 @@ class EvaluacionesService
     }
     public function filtrarEvaluacionesCertificados(
         $nivelNombre,
-        $idFase,
         $idArea,
         $idNivel,
         $busqueda,
@@ -687,13 +698,13 @@ class EvaluacionesService
         try {
             $query = $this->baseQueryEvaluaciones(
                 $nivelNombre,
-                $idFase,
                 $idArea,
                 $idNivel,
                 $busqueda,
                 $publicado
             )->orderBy('puesto_oficial', 'asc');
             ;
+
             $allData = $query->get()->map(function ($eva) {
 
 
@@ -704,7 +715,12 @@ class EvaluacionesService
                 $config = \App\Models\ConfigMedallero::where('id_area_nivel', $areaNivelId)->first();
 
                 $premio = null;
+                $certificado = CertificadoLog::where('id_inscripcion', $eva->id_inscripcion)->first();
+                $estado_certificado = "Pendiente";
 
+                if ($certificado) {
+                    $estado_certificado = "Generado";
+                }
                 if ($config && $eva->puesto_oficial) {
 
                     $puesto = $eva->puesto_oficial;
@@ -729,7 +745,8 @@ class EvaluacionesService
                     return null;
                 return [
                     'id_ranking' => $eva->id,
-                    'nombre_completo' => $eva->inscripcion->competidor->nombres . ' ' . $eva->inscripcion->competidor->apellidos,
+                    'id_inscrito' => $eva->id_inscripcion,
+                    'nombre_completo' => $eva->inscripcion->competidor->nombres . ' ' . $eva->inscripcion->competidor->apellidos ?? 'Sin registro',
                     'unidad_educativa' => $eva->inscripcion->competidor->institucion->nombre_institucion ?? 'Sin registro',
                     'departamento' => $eva->inscripcion->competidor->institucion->departamento_institucion ?? 'Sin registro',
                     'area' => $eva->inscripcion->area_nivel->area->nombre_area,
@@ -738,7 +755,8 @@ class EvaluacionesService
                     'puesto' => $eva->puesto_oficial,
                     'profesor' => $evaCompetidor->evaluador->nombres . ' ' . $evaCompetidor->evaluador->apellidos ?? 'No definido',
                     'responsable_area' => $eva->inscripcion->area_nivel->area->responsable->nombres . ' ' . $eva->inscripcion->area_nivel->area->responsable->apellidos ?? 'No definido',
-                    'premio' => $premio
+                    'premio' => $premio,
+                    'estado_certificado' => $estado_certificado
                 ];
 
 
@@ -778,7 +796,6 @@ class EvaluacionesService
       } */
     private function baseQueryEvaluaciones(
         $nivelNombre,
-        $idFase,
         $idArea,
         $idNivel,
         $busqueda,
@@ -787,16 +804,15 @@ class EvaluacionesService
         $query = Ranking::with([
             'fase',
             'inscripcion.competidor.grado',
-            'inscripcion.competidor',
             'inscripcion.competidor.institucion',
             'inscripcion.area_nivel.area',
             'inscripcion.area_nivel.nivel',
             'inscripcion.evaluacions.asignacion.persona',
-        ]);
+        ])->where('estado_final', '=', "Clasificado");
 
-        if ($idFase) {
-            $query->where('id_fase', '=', $idFase);
-        }
+        $query->whereHas('fase', function ($q) {
+            $q->where('nombre', '=', 'final');
+        });
         if ($idArea) {
             $query->whereHas('inscripcion.area_nivel.area', function ($q) use ($idArea) {
                 $q->where('id_area', '=', $idArea);
@@ -817,7 +833,7 @@ class EvaluacionesService
                 $q->where('nombre_grado', 'ILIKE', "%{$nivelNombre}%");
             });
         }
-        $query->where('estado_final', '=', "Clasificado");
+
         if ($busqueda) {
             $query->whereHas('inscripcion.competidor', function ($q) use ($busqueda) {
                 $q->where('nombres', 'ILIKE', "%{$busqueda}%")
@@ -936,7 +952,12 @@ class EvaluacionesService
 
                 // 🔹 Obtener configuración del medallero de ese área/nivel
                 $config = \App\Models\ConfigMedallero::where('id_area_nivel', $areaNivelId)->first();
+                $certificado = CertificadoLog::where('id_inscripcion', $eva->id_inscripcion)->first();
+                $estado_certificado = "Pendiente";
 
+                if ($certificado) {
+                    $estado_certificado = "Generado";
+                }
                 $premio = "Sin medalla";
 
                 if ($config && $eva->puesto_oficial) {
@@ -962,8 +983,10 @@ class EvaluacionesService
 
                 return [
                     'id_competidor' => $eva->inscripcion->competidor->id,
+                    'id_inscrito' => $eva->id_inscripcion,
                     'ci' => $eva->inscripcion->competidor->ci,
                     'nombre' => $eva->inscripcion->competidor->nombres,
+                    'unidad_educativa' => $eva->inscripcion->competidor->institucion->nombre_institucion ?? 'Sin registro',
                     'grado' => $eva->inscripcion->competidor->grado->nombre_grado,
                     'area' => $eva->inscripcion->area_nivel->area->nombre_area,
                     'nivel' => $eva->inscripcion->area_nivel->nivel->nombre_nivel,
@@ -973,6 +996,7 @@ class EvaluacionesService
                     'estado_final' => $eva->estado_final,
                     'puesto' => $eva->puesto_oficial,
                     'premio' => $premio,
+                    'estado_certificado' => $estado_certificado
                 ];
             });
             $data = $evaluaciones->items();
@@ -1027,20 +1051,24 @@ class EvaluacionesService
 
             // Obtener id del evaluador desde auth
             $evaluadorId = auth()->guard('sanctum')->user()->id;
+            $persona = Persona::where('id_usuario', $evaluadorId)->first();
+
+            $idPersona = $persona->id;
+
             $datos = $request->all();
             // Obtener IP del cliente
             $ip = $request->ip();
             $evaluacion = $this->evaluacionRepository->findById($id);
 
 
-            $antes = $evaluacion->only(['nota', 'descripcion', 'observacion', 'estado_confirmacion', 'respeto', 'integridad', 'puntualidad']);
+            $antes = $evaluacion->only(['nota', 'descripcion', 'observacion', 'estado_confirmacion', 'respeto', 'integridad', 'puntualidad', 'id_fase']);
 
             if (isset($datos['conducta'])) {
                 $evaluacion->respeto = $datos['conducta']['respeto'] ?? $evaluacion->respeto;
                 $evaluacion->integridad = $datos['conducta']['integridad'] ?? $evaluacion->integridad;
                 $evaluacion->puntualidad = $datos['conducta']['puntualidad'] ?? $evaluacion->puntualidad;
             }
-
+            $motivo = $datos['observacion'];
             $evaluacion->nota = $datos['nota'] ?? $evaluacion->nota;
             $evaluacion->descripcion = $datos['descripcion'] ?? $evaluacion->descripcion;
             $evaluacion->observacion = $datos['observacion'] ?? $evaluacion->observacion;
@@ -1054,13 +1082,15 @@ class EvaluacionesService
 
             DB::table('evaluacion_auditoria')->insert([
                 'id_evaluacion' => $evaluacion->id,
-                'evaluador_id' => $evaluadorId,
+                'evaluador_id' => $idPersona,
                 'cambios' => json_encode([
                     'antes' => $antes,
                     'despues' => $evaluacion->only(['nota', 'descripcion', 'respeto', 'integridad', 'puntualidad'])
                 ]),
                 'ip' => $ip,
-                'created_at' => now()
+                'created_at' => now(),
+                'accion' => 'update',
+                'motivo' => $motivo,
             ]);
 
 

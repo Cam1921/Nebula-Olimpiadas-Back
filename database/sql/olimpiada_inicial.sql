@@ -388,27 +388,40 @@ VALUES
 
 
 
--- 1️⃣ Primero creamos la función
 CREATE OR REPLACE FUNCTION public.fn_migrar_inscripcion_a_evaluacion
 ()
-RETURNS trigger AS $$
+RETURNS trigger AS
+$BODY$
 DECLARE
     v_id_fase INT;
+    v_id_evaluacion INT;
+		v_id_evaluador INT;
 BEGIN
     -- Buscar el id_fase donde el nombre sea "clasificación"
-    SELECT id
-    INTO v_id_fase
-    FROM public.fase
-    WHERE LOWER(nombre) = LOWER('clasificacion')
+    SELECT pr.id_persona
+    INTO v_id_evaluador
+    FROM public.persona_rol pr
+        JOIN public.rol r ON pr.id_rol = r.id
+    WHERE r.nombre = 'administrador'
     LIMIT 1;
 
-    -- Si no se encuentra, puedes lanzar un error opcionalmente
-    IF v_id_fase IS NULL THEN
+    IF v_id_evaluador IS NULL THEN
+        RAISE EXCEPTION 'No existe ningún usuario con rol admin';
+END
+IF;
+
+    SELECT id
+INTO v_id_fase
+FROM public.fase
+WHERE LOWER(nombre) = LOWER('clasificacion')
+LIMIT 1;
+
+IF v_id_fase IS NULL THEN
         RAISE EXCEPTION 'No existe ninguna fase con el nombre "clasificación"';
 END
 IF;
 
-    -- Inserta la evaluación pendiente
+    -- Inserta la evaluación pendiente y captura el id generado
     INSERT INTO public.evaluacion
     (
     nota,
@@ -431,15 +444,41 @@ VALUES
         FALSE,
         FALSE,
         NEW.id,
-        v_id_fase, -- ahora es dinámico
+        v_id_fase,
         NOW(),
         NOW()
+    )
+RETURNING id INTO v_id_evaluacion;
+
+-- Inserta en log_evaluacion
+INSERT INTO public.evaluacion_auditoria
+    (
+    id_evaluacion,
+    accion,
+    cambios,
+    evaluador_id,
+    ip,
+    motivo,
+    created_at
+    )
+VALUES
+    (
+        v_id_evaluacion,
+        'insert', -- tipo de acción
+        '{"antes": null, "despues": {"nota": null, "descripcion": null, "respeto": false, "integridad": false, "puntualidad": false}}'
+::jsonb,
+        v_id_evaluador,                 -- evaluador_id nulo porque es automático
+        '127.0.0.1',          -- IP ficticia para trigger
+        'Migración automática desde inscripcion',
+        NOW
+()
     );
 
 RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
-
+$BODY$
+LANGUAGE plpgsql VOLATILE
+COST 100;
 
 -- 2️⃣ Luego creamos el trigger
 DROP TRIGGER IF EXISTS trg_inscripcion_a_evaluacion
@@ -455,7 +494,6 @@ ROW
 EXECUTE
 FUNCTION public.fn_migrar_inscripcion_a_evaluacion
 ();
-
 
 INSERT INTO area_nivel_fase
     (id_area_nivel, id_fase)

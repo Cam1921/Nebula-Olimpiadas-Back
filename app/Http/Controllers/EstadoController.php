@@ -231,7 +231,8 @@ class EstadoController extends Controller
                 if ($fase->estado === 'en proceso') {
                     $fase->estado = 'activa';
                     $fase->save();
-                    if ($fase->nombre == "final") {
+                    if ($fase->nombre === "final") {
+                        Log::debug('fase_activa_final', array($faseActiva));
                         $this->estadoService->migrarEvaluaciones();
                     }
                 }
@@ -241,7 +242,7 @@ class EstadoController extends Controller
                 if ($fase->estado === 'activa') {
                     $fase->estado = 'cerrada';
                     $fase->save();
-                    if ($fase->nombre = 'clasificación' || 'final') {
+                    if ($fase->nombre === 'clasificacion' || $fase->nombre === 'final') {
                         AreaNivelFase::where('id_fase', $fase->id)
                             ->update([
                                 'estado' => 'concluido'
@@ -332,26 +333,7 @@ class EstadoController extends Controller
 
                 }
             } else if ($hoy->gt($actividadFinFin)) {
-                if ($actividad->nombre === 'publicacion') {
-                    $todoConfirmado = $areaNivelFases->every(function ($item) {
-                        return $item->estado === 'publicado';
-                    });
-                    if (!$todoConfirmado) {
-
-                        foreach ($areaNivelFases as $anf) {
-                            if ($anf->estado === 'confirmado') {
-                                $anf->estado = 'publicado';
-                                $anf->save();
-                            }
-
-                        }
-                        Evaluacion::where('id_fase', $faseActiva->id)
-                            ->update([
-                                'estado_confirmacion' => 'publicado'
-                            ]);
-
-                    }
-                } else if ($actividad->nombre === 'calificacion') {
+                if ($actividad->nombre === 'calificacion') {
                     $todoConfirmado = $areaNivelFases->every(function ($item) {
                         return $item->estado === 'En_revicion';
                     });

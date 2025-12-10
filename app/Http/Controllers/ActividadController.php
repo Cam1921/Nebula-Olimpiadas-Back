@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Repositories\FaseRepository;
 use App\Services\ActividadService;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 /**
  * Summary of ActividadController

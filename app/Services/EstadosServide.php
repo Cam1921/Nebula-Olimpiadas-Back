@@ -9,6 +9,7 @@ use App\Models\Ranking;
 use App\Repositories\AreaNivelFaseRepository;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class EstadosServide
 {
@@ -87,19 +88,30 @@ class EstadosServide
         DB::beginTransaction();
 
         try {
-            $faseFinal = DB::table('fase')->where('nombre', 'Final')->first();
-            $faseClasificatoria = DB::table('fase')->where('nombre', 'Clasificación')->first();
+            $faseFinal = DB::table('fase')->where('nombre', 'final')->first();
+            $faseClasificatoria = DB::table('fase')->where('nombre', 'clasificacion')->first();
             $areaNiveles = DB::table('area_nivel')->get();
             if (!$faseFinal) {
                 throw new \Exception("No existe la fase final 'Evaluación' en la tabla fase.");
             }
+            Log::debug("esta entrando evaluacion", [$faseFinal, $faseClasificatoria]);
             foreach ($areaNiveles as $areaNivel) {
                 $AreaNivelFase = AreaNivelFase::where('id_area_nivel', $areaNivel->id)->where('id_fase', $faseFinal->id)->first();
                 if ($AreaNivelFase) {
                     continue;
                 }
+                $yaExistenEvaluaciones = Evaluacion::where('id_fase', $faseFinal->id)
+                    ->whereHas('inscripcion', function ($q) use ($areaNivel) {
+                        $q->where('id_area_nivel', $areaNivel->id);
+                    })
+                    ->exists();
+
+                if ($yaExistenEvaluaciones) {
+                    continue; // NO MIGRAR DE NUEVO
+                }
+                Log::debug("esta entrando evaluacion 1", []);
                 DB::table('area_nivel_fase')->insertGetId([
-                    'estado' => 'En_evaluacion',
+                    'estado' => 'Pendiente',
                     'fecha_ini' => now(),
                     'fecha_fin' => now()->addDays(15),
                     'id_area_nivel' => $areaNivel->id, // cada areaNivel
@@ -132,63 +144,114 @@ class EstadosServide
                 ]);
 
             }
+            // Obtener las evaluaciones recién insertadas
+            $evaluacionesNuevas = DB::table('evaluacion')
+                ->where('id_fase', $faseFinal->id)
+                ->whereHas('inscripcion', function ($q) use ($areaNivel) {
+                    $q->where('id_area_nivel', $areaNivel->id);
+                })
+                ->get();
+            $admin = DB::table('persona_rol')->whereHas('rol', function ($q) {
+                $q->where('nombre', 'administrador');
+            });
+            $idPersona = $admin->id_persona ?? null;
+            foreach ($evaluacionesNuevas as $evaluacion) {
+                DB::table('evaluacion_auditoria')->insert([
+                    'id_evaluacion' => $evaluacion->id,
+                    'evaluador_id' => $idPersona ?? null,
+                    'cambios' => json_encode([
+                        'antes' => null, // era nueva
+                        'despues' => [
+                            'nota' => $evaluacion->nota,
+                            'descripcion' => $evaluacion->descripcion,
+                            'respeto' => $evaluacion->respeto,
+                            'integridad' => $evaluacion->integridad,
+                            'puntualidad' => $evaluacion->puntualidad,
+                        ]
+                    ]),
+                    'ip' => request()->ip() ?? '127.0.0.1',
+                    'accion' => 'insert',
+                    'motivo' => 'Migración automática de evaluaciones',
+                    'created_at' => now(),
+                ]);
+            }
             DB::commit();
 
         } catch (\Exception $e) {
             DB::rollBack();
+            // Log del error completo
+            Log::error("Error en migrarEvaluaciones: " . $e->getMessage(), [
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             throw $e;
+
         }
     }
-    public function migrarEvaluacionesRanking(
-        $idAreaNivelFase = null
-    ) {
+    public function migrarEvaluacionesRanking($idAreaNivelFase = null)
+    {
         if (!$idAreaNivelFase) {
             return;
         }
+
         $faseActiva = Fase::where('estado', 'activa')->first();
         if (!$faseActiva) {
             return;
         }
+
         if (!in_array($faseActiva->nombre, ['clasificacion', 'final'])) {
             return;
         }
+
+        // ⚠️ PREVENIR MIGRACIONES DUPLICADAS
+        $yaExisteRanking = Ranking::where('id_fase', $faseActiva->id)
+            ->whereHas('inscripcion.area_nivel.area_nivel_fase', function ($q) use ($idAreaNivelFase) {
+                $q->where('id', $idAreaNivelFase);
+            })
+            ->exists();
+
+        if ($yaExisteRanking) {
+            \Log::debug("⛔ Ranking YA MIGRADO para areaNivelFase $idAreaNivelFase");
+            return;
+        }
+
+        // obtener evaluaciones
         $evaluaciones = Evaluacion::where('id_fase', $faseActiva->id)
             ->whereNotNull('nota')
-            ->where('estado_confirmacion', 'aprobado') // ya confirmados y publicados
+            ->where('estado_confirmacion', 'aprobado')
             ->orderByDesc('nota')
             ->whereHas('inscripcion.area_nivel.area_nivel_fase', function ($q) use ($idAreaNivelFase) {
                 $q->where('id', $idAreaNivelFase);
-            })->get();
-
-
-
+            })
+            ->get();
 
         if ($evaluaciones->isEmpty()) {
             return;
         }
 
-        // 3. Asignación de posiciones (considerando EMPATES)
-        $posicion = 1;
+        // asignación de posiciones…
         $posicionReal = 1;
         $notaAnterior = null;
 
         foreach ($evaluaciones as $evaluacion) {
 
             if ($notaAnterior !== null && $evaluacion->nota < $notaAnterior) {
-                // Si la nota es menor, se incrementa la posición real
                 $posicionReal++;
             }
+
+            // reglas de clasificación
             $estado_clasificado = null;
-            if ($evaluacion->nota !== null) {
-                if ($evaluacion->nota >= 51 && $evaluacion->respeto && $evaluacion->integridad && $evaluacion->puntualidad) {
-                    $estado_clasificado = "Clasificado";
-                } elseif ($evaluacion->nota < 51 && $evaluacion->respeto && $evaluacion->integridad && $evaluacion->puntualidad) {
-                    $estado_clasificado = "No clasificado";
-                } elseif (!$evaluacion->respeto || !$evaluacion->integridad || !$evaluacion->puntualidad) {
-                    $estado_clasificado = "Descalificado";
-                }
+
+            if ($evaluacion->nota >= 51 && $evaluacion->respeto && $evaluacion->integridad && $evaluacion->puntualidad) {
+                $estado_clasificado = "Clasificado";
+            } elseif ($evaluacion->nota < 51 && $evaluacion->respeto && $evaluacion->integridad && $evaluacion->puntualidad) {
+                $estado_clasificado = "No clasificado";
+            } else {
+                $estado_clasificado = "Descalificado";
             }
-            // Crear registro en ranking
+
             Ranking::create([
                 'id_fase' => $faseActiva->id,
                 'id_inscripcion' => $evaluacion->id_inscripcion,
@@ -197,15 +260,14 @@ class EstadosServide
                 'puntaje_total' => $evaluacion->nota,
                 'observacion' => $evaluacion->descripcion,
                 'publicado_en' => now(),
-                'created_at' => now(),
-                'updated_at' => now(),
             ]);
 
             $notaAnterior = $evaluacion->nota;
-            $posicion++;
         }
+
         return true;
     }
+
 
 
 

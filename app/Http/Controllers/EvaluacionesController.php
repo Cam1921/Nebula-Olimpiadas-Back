@@ -7,9 +7,11 @@ use App\Exports\ListaResultadosExport;
 use App\Models\AreaNivelFase;
 use App\Models\Equipo;
 use App\Models\Evaluacion;
+use App\Models\Fase;
 use App\Repositories\EvaluacionRepository;
 use App\Services\EvaluacionesService;
 use App\Traits\ApiResponseTrait;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
@@ -351,8 +353,6 @@ class EvaluacionesController extends Controller
         );
         $datos = $res['content']['data'];
         $estado = $request->estado ?? null;
-
-
         return Excel::download(new ListaResultadosExport($datos, $estado), 'evaluaciones_filtradas.xlsx');
     }
 
@@ -365,6 +365,65 @@ class EvaluacionesController extends Controller
     {
         $res = $this->evaluacionesService->obtenerCompetidoresEquipo($id);
         return response()->json($res['content'], $res['status_code']);
+    }
+    public function exportarEvaluacionesPdf(Request $request)
+    {
+        $res = app(EvaluacionesService::class)->filtrarEvaluaciones(
+            $request->esPublicado ?? false,
+            $request->estado ?? null,
+            $request->nivel_nombre ?? null,
+            $request->id_fase ?? null,
+            $request->id_area ?? null,
+            $request->id_nivel ?? null,
+            $request->busqueda ?? null,
+            99999,
+            1,
+            $request->estado_clasificado ?? null,
+            $request->ordenar_por ?? 'nombre',
+            $request->direccion ?? 'asc',
+        );
+
+        $datos = $res['content']['data'];
+        $id_fase = $request->id_fase ?? null;
+        if ($id_fase) {
+            $fase = Fase::find($id_fase);
+        }
+
+        // Definir columnas del PDF según estado
+        switch ($fase->nombre) {
+            case 'clasificacion':
+                $headings = ['Nombre Completo', 'Área', 'Nivel', 'Puntaje', 'Estado'];
+                $rows = collect($datos)->map(fn($eva) => [
+                    $eva['nombre'],
+                    $eva['area'],
+                    $eva['nivel'],
+                    $eva['puntaje'],
+                    $eva['estado_final'],
+                ]);
+                break;
+
+            case 'final':
+                $headings = ['Rank', 'Nombre Completo', 'Área', 'Nivel', 'Puntaje', 'Premio'];
+                $rows = collect($datos)->map(fn($eva) => [
+                    $eva['puesto'],
+                    $eva['nombre'],
+                    $eva['area'],
+                    $eva['nivel'],
+                    $eva['puntaje'],
+                    $eva['premio'],
+
+                ]);
+                break;
+        }
+
+
+        $pdf = Pdf::loadView('pdf.resultados', [
+            'rows' => $rows,
+            'headings' => $headings,
+            'fase' => $fase->nombre
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('evaluaciones_filtradas.pdf');
     }
 
 }

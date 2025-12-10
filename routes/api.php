@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActividadController;
 use App\Http\Controllers\AreaNivelController;
 use App\Http\Controllers\AsignacionController;
+use App\Http\Controllers\AuditoriaaController;
 use App\Http\Controllers\CatalogoController;
 use App\Http\Controllers\ControlFaseController;
 use App\Http\Controllers\EstadoController;
@@ -37,6 +38,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 Route::prefix('catalogos')->group(function () {
     Route::get('/areas', [CatalogoController::class, 'areas']);
+    Route::get('/fases', [CatalogoController::class, 'fases']);
+    Route::get('/roles', [CatalogoController::class, 'roles']);
     Route::get('/niveles', [CatalogoController::class, 'niveles']);
     Route::get('/area-niveles', [CatalogoController::class, 'areaNiveles']);
     Route::get('/', [CatalogoController::class, 'catalogos']);
@@ -169,3 +172,11 @@ Route::prefix('personas')->middleware(['auth:sanctum'])->group(function () {
 });
 
 
+Route::prefix('logs')->middleware(['auth:sanctum'])->group(function () {
+    Route::get('/evaluaciones', [AuditoriaaController::class, 'index']);
+    Route::get('/evaluaciones/export', [AuditoriaaController::class, 'exportarLogsEvaluaciones']);
+    Route::get('/certificados', [AuditoriaaController::class, 'getCertificadoLogs']);
+    Route::post('/certificados', [AuditoriaaController::class, 'storeCertificadoLogs']);
+});
+
+Route::get('/exportar-evaluaciones-pdf', [EvaluacionesController::class, 'exportarEvaluacionesPdf']);

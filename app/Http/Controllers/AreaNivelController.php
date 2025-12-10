@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AreaNivel;
+use App\Models\Fase;
 use App\Services\AreaNivelService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
@@ -23,13 +24,29 @@ class AreaNivelController extends Controller
         $idNivel = $request->query('id_nivel');
         $perPage = $request->query('per_page', 10);
 
+        // 1. Obtener la fase activa
+        $faseActiva = Fase::where('estado', 'activa')->first();
+
+        if (!$faseActiva) {
+            return response()->json([
+                'message' => 'No existe una fase activa.'
+            ], 400);
+        }
+
         $query = AreaNivel::withCount([
             'asignacions as evaluadores_count' => function ($q) {
                 $q->whereHas('persona.rols', function ($r) {
                     $r->where('nombre', 'evaluador');
                 });
             },
-            'inscripcions'
+
+            // 2. Competidores SOLO de la fase activa
+            'inscripcions as inscripcions_count' => function ($q) use ($faseActiva) {
+                $q->whereHas('evaluacions', function ($e) use ($faseActiva) {
+                    $e->where('id_fase', $faseActiva->id);
+                });
+            }
+
         ])->with(['area', 'nivel']);
 
         if ($idArea) {
@@ -50,14 +67,13 @@ class AreaNivelController extends Controller
                 'nivel' => $item->nivel->nombre_nivel,
                 'id_nivel' => $item->nivel->id,
                 'total_evaluadores' => $item->evaluadores_count,
-                'total_competidores' => $item->inscripcions_count,
+                'total_competidores' => $item->inscripcions_count, // ahora correcto
             ];
         });
 
         return response()->json(
             $this->successResponse(
                 'Áreas y niveles obtenidos correctamente.',
-
                 $items->toArray(),
                 [
                     'current_page' => $areaNiveles->currentPage(),
@@ -69,6 +85,7 @@ class AreaNivelController extends Controller
             200
         );
     }
+
     public function getEvaluadores(Request $request, $idAreaNivel)
     {
         $res = $this->areaNivelService->listaEvaluadores($request->all(), $idAreaNivel);
