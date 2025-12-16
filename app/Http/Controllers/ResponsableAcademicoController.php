@@ -1,10 +1,7 @@
 <?php
-// app/Http/Controllers/ResponsableAcademicoController.php
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreResponsableAcademicoRequest;
-use App\Models\Persona;
-use App\Models\User;
 use App\Repositories\InvitacionRepository;
 use App\Services\EvaluadoresService;
 use App\Services\PersonaService;
@@ -12,16 +9,24 @@ use App\Services\ResponsableService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
-
+/**
+ * Clase ResponsableAcademicoController
+ */
 class ResponsableAcademicoController extends Controller
 {
 
     protected $invitacionRepo;
-
     protected $evaluadorService;
     protected $personaService;
     protected $responsableService;
 
+    /**
+     * Constructor de la clase
+     * @param EvaluadoresService $evaluadoresService
+     * @param PersonaService $personaService
+     * @param InvitacionRepository $invitacionRepo
+     * @param ResponsableService $responsableService
+     */
     public function __construct(EvaluadoresService $evaluadoresService, PersonaService $personaService, InvitacionRepository $invitacionRepo, ResponsableService $responsableService)
     {
         $this->evaluadorService = $evaluadoresService;
@@ -29,18 +34,20 @@ class ResponsableAcademicoController extends Controller
         $this->invitacionRepo = $invitacionRepo;
         $this->responsableService = $responsableService;
     }
-
     /**
-     * Obtener todos los evaluadores         
+     * Lista responsables academicos
+     * @return JsonResponse
      */
     public function index(): JsonResponse
     {
         $res = $this->responsableService->getResponsablesAcademicos();
-
         return response()->json($res['content'], $res['status_code']);
     }
+
     /**
      * Crear nuevo evaluador
+     * @param StoreResponsableAcademicoRequest $request
+     * @return JsonResponse
      */
     public function store(StoreResponsableAcademicoRequest $request): JsonResponse
     {
@@ -48,18 +55,23 @@ class ResponsableAcademicoController extends Controller
         $res = $this->responsableService->crearResponsableAcademico($validated);
         return response()->json($res['content'], $res['status_code']);
     }
+
     /**
      * Actualizar datos de un evaluador
+     * @param Request $request
+     * @param mixed $id
+     * @return JsonResponse
      */
     public function update(Request $request, $id): JsonResponse
     {
-
         $res = $this->responsableService->actualizarResponsableAcademico($id, $request);
         return response()->json($res['content'], $res['status_code']);
     }
 
     /**
      * Eliminar un evaluador
+     * @param mixed $id
+     * @return JsonResponse
      */
     public function destroy($id): JsonResponse
     {
@@ -69,22 +81,12 @@ class ResponsableAcademicoController extends Controller
 
     /**
      * Verificar existencia de campos únicos
+     * @param Request $request
+     * @return JsonResponse
      */
     public function check(Request $request): JsonResponse
     {
-        $field = $request->query('field');
-        $value = $request->query('value');
-        $excludeId = $request->query('excludeId'); // ← Nueva línea
-
-        if (!in_array($field, ['ci', 'telefono', 'email'])) {
-            return response()->json(['error' => 'Campo no permitido'], 400);
-        }
-
-        $exists = match ($field) {
-            'email' => User::where('email', $value)->exists(),
-            'ci', 'telefono' => Persona::where($field, $value)->exists(),
-        };
-
-        return response()->json(['exists' => $exists]);
+        $res = $this->responsableService->checkResponsable($request);
+        return response()->json($res['content'], $res['status_code']);
     }
 }

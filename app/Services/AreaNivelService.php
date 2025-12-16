@@ -4,11 +4,103 @@ namespace App\Services;
 
 use App\Models\AreaNivel;
 use App\Models\Asignacion;
+use App\Models\Fase;
 use App\Models\Persona;
 use Illuminate\Support\Facades\Log;
 
 class AreaNivelService
 {
+
+    public function ListarAreaNiveles($request)
+    {
+        try {
+            $idArea = $request->query('id_area');
+            $idNivel = $request->query('id_nivel');
+            $perPage = $request->query('per_page', 10);
+
+            $faseActiva = Fase::where('estado', 'activa')
+                ->where(function ($q) {
+                    $q->where('nombre', 'clasificacion')
+                        ->orWhere('nombre', 'final');
+                })
+                ->first();
+
+            if (!$faseActiva) {
+                return [
+                    'status_code' => 400,
+                    'content' => [
+                        'status' => 'error',
+                        'message' => 'No existe una fase activa.'
+                    ]
+                ];
+            }
+
+            $query = AreaNivel::withCount([
+                'asignacions as evaluadores_count' => function ($q) {
+                    $q->whereHas('persona.rols', function ($r) {
+                        $r->where('nombre', 'evaluador');
+                    });
+                },
+
+                // 2. Competidores SOLO de la fase activa
+                'inscripcions as inscripcions_count' => function ($q) use ($faseActiva) {
+                    $q->whereHas('evaluacions', function ($e) use ($faseActiva) {
+                        $e->where('id_fase', $faseActiva->id);
+                    });
+                }
+
+            ])->with(['area', 'nivel']);
+
+            if ($idArea) {
+                $query->where('id_area', $idArea);
+            }
+
+            if ($idNivel) {
+                $query->where('id_nivel', $idNivel);
+            }
+
+            $areaNiveles = $query->paginate($perPage);
+
+            $items = collect($areaNiveles->items())->map(function ($item) {
+                return [
+                    'id_area_nivel' => $item->id,
+                    'area' => $item->area->nombre_area,
+                    'id_area' => $item->area->id,
+                    'nivel' => $item->nivel->nombre_nivel,
+                    'id_nivel' => $item->nivel->id,
+                    'total_evaluadores' => $item->evaluadores_count,
+                    'total_competidores' => $item->inscripcions_count, // ahora correcto
+                ];
+            });
+            $data = $items->toArray();
+            $meta = [
+                'current_page' => $areaNiveles->currentPage(),
+                'per_page' => $areaNiveles->perPage(),
+                'total' => $areaNiveles->total(),
+                'last_page' => $areaNiveles->lastPage(),
+            ];
+            return [
+                'status_code' => 200,
+                'content' =>
+                    [
+                        'status' => 'success',
+                        'message' => 'Area-Niveles obtenidos correctamente.',
+                        'data' => $data,
+                        'meta' => $meta,
+                    ]
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error al listar Area-Niveles: ' . $e->getMessage());
+            return [
+                'status_code' => 500,
+                'content' => [
+                    'status' => 'error',
+                    'message' => 'Error al obtener Area-Niveles.'
+                ]
+            ];
+        }
+
+    }
     public function getResumenEvaluaciones(AreaNivel $areaNivel)
     {
         $evaluaciones = $areaNivel->inscripcions->flatMap->evaluacions;

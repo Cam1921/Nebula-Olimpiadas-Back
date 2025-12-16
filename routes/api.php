@@ -23,12 +23,17 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ResponsableAcademicoController;
 use App\Http\Controllers\EvaluadorController;
 
+/**
+ * Rutas de autenticación
+ */
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 
-// Rutas protegidas (solo para usuarios logueados)
+/**
+ * Rutas protegidas que requieren autenticación
+ */
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -36,6 +41,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/persona', [PersonaController::class, 'update']);
 });
 
+/**
+ * Rutas para la obtención de catálogos
+ */
 Route::prefix('catalogos')->group(function () {
     Route::get('/areas', [CatalogoController::class, 'areas']);
     Route::get('/fases', [CatalogoController::class, 'fases']);
@@ -45,6 +53,9 @@ Route::prefix('catalogos')->group(function () {
     Route::get('/', [CatalogoController::class, 'catalogos']);
 });
 
+/**
+ * Rutas para la gestión de responsables académicos
+ */
 Route::prefix('responsable-academico')->middleware(['auth:sanctum', 'role:administrador'])->group(function () {
     Route::get('/', [ResponsableAcademicoController::class, 'index']);
     Route::post('/', [ResponsableAcademicoController::class, 'store']);
@@ -53,6 +64,9 @@ Route::prefix('responsable-academico')->middleware(['auth:sanctum', 'role:admini
     Route::delete('/{id}', [ResponsableAcademicoController::class, 'destroy']);
 });
 
+/**
+ * Rutas para la gestión de evaluadores                                                                                                                                             
+ */
 Route::prefix('evaluadores')->middleware(['auth:sanctum', 'role:administrador'])->group(function () {
     Route::get('/', [EvaluadorController::class, 'index']);
     Route::post('/', [EvaluadorController::class, 'store']);
@@ -64,8 +78,10 @@ Route::prefix('evaluadores')->middleware(['auth:sanctum', 'role:administrador'])
     Route::get('/import/errores', [ImportarEvaluadoresController::class, 'descargarErrores']);
 });
 
-
-Route::prefix('fases')->group(function () {
+/**
+ * Rutas para la gestión de fases
+ */
+Route::prefix('fases')->middleware(['auth:sanctum', 'role:administrador'])->group(function () {
     Route::get('/', [FaseController::class, 'index']);
     Route::get('/dropdown', [FaseController::class, 'obtenerFases']);
     Route::post('/publicar-todo', [FaseController::class, 'publicarTodo']);
@@ -73,13 +89,15 @@ Route::prefix('fases')->group(function () {
     Route::post('/', [FaseController::class, 'store']);
     Route::put('/{id}', [FaseController::class, 'update']);
     Route::delete('/{id}', [FaseController::class, 'destroy']);
-
     Route::get('/verificar/{nombreFase}', [FaseController::class, 'verificarFase']);
     Route::get('/{faseId}/actividades', [ActividadController::class, 'porFase']);
     Route::put('{id}/publicacion', [EstadoController::class, 'publicarFaseCompleta']);
 });
 
-Route::prefix('actividades')->group(function () {
+/**
+ * Rutas para la gestión de actividades
+ */
+Route::prefix('actividades')->middleware(['auth:sanctum', 'role:administrador'])->group(function () {
     Route::get('/', [ActividadController::class, 'index']);
     Route::get('/{id}', [ActividadController::class, 'show']);
     Route::post('/', [ActividadController::class, 'store']);
@@ -88,17 +106,22 @@ Route::prefix('actividades')->group(function () {
     Route::get('/verificar/{nombreFase}/{nombreActividad}', [ActividadController::class, 'verificarActividad']);
 });
 
-Route::prefix('importaciones')->middleware(['auth:sanctum', 'role:administrador'])->group(function () {
-    Route::post('/preview', [ImportacionesController::class, 'preview']);
-    Route::post('/confirmar', [ImportacionesController::class, 'confirmar']);
-    Route::get('/errores', [ImportacionesController::class, 'descargarErrores']);
-});
-
+/**
+ * Rutas para la gestión de competidores
+ */
 Route::prefix('competidores')->middleware(['auth:sanctum', 'role:administrador'])->group(function () {
-    Route::get('/listar', [ListarInscritosCotroller::class, 'listar']);
-    Route::get('/exportar', [ListarInscritosCotroller::class, 'exportar']);
+    Route::get('/', [ListarInscritosCotroller::class, 'listar']);
+    Route::get('/export', [ListarInscritosCotroller::class, 'exportar']);
+    Route::prefix('importaciones')->group(function () {
+        Route::post('/', [ImportacionesController::class, 'preview']);
+        Route::post('/confirmar', [ImportacionesController::class, 'confirmar']);
+        Route::get('/errores', [ImportacionesController::class, 'descargarErrores']);
+    });
 });
 
+/**
+ * Rutas para la gestión de evaluaciones
+ */
 Route::prefix('evaluaciones')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/mis-evaluaciones/exportar', [EvaluacionesController::class, 'exportarExcel']);
     Route::get('/mis-evaluaciones/area-nivel-fase/{idAreaNivelFase}', [EvaluacionesController::class, 'index']);
@@ -111,11 +134,6 @@ Route::prefix('evaluaciones')->middleware(['auth:sanctum'])->group(function () {
 Route::get('/resultados', [EvaluacionesController::class, 'filtrar']);
 Route::get('/equipos/{id}/competidores', [EvaluacionesController::class, 'obtenerCompetidoresEquipo']);
 
-/* Route::get('send-mail', function () {
-    $message = 'hello word';
-    Mail::to('202108055@est.umss.edu')->send(new SendTestEmail($message));
-
-}); */
 Route::middleware(['auth:sanctum', 'role:administrador'])->group(function () {
     Route::post('/invitaciones/send-mail/{id}', [UserInviteController::class, 'sendEmail']);
     Route::get('/notificaciones/listar', [UserInviteController::class, 'listarNotificaciones']);
@@ -133,12 +151,6 @@ Route::prefix('area-nivel-fase')->group(function () {
     Route::put('/{id}/estado', [EstadoController::class, 'actualizarEstadoAreaNivelFase']);
     Route::put('/estado-publicado', [EstadoController::class, 'actualizarEstadoAreaNivelFaseTodos']);
 });
-Route::get('/test', function () {
-    return response()->json([
-        'status' => 'ok',
-        'message' => 'API funcionando correctamente',
-    ]);
-});
 
 Route::get('/evaluaciones/exportar', [EvaluacionesController::class, 'exportarEvaluaciones']);
 Route::get('/evaluaciones/filtrar', [EvaluacionesController::class, 'filtrar']);
@@ -154,6 +166,8 @@ Route::prefix('asignaciones')->group(function () {
     Route::post('/asignar-competidores', [AsignacionController::class, 'asignarInscritos']);
     Route::get('/evaluadores', [AsignacionController::class, 'listar']);
 });
+
+//rutas para area-nivel
 Route::prefix('area-nivel')->group(function () {
     Route::get('/', [AreaNivelController::class, 'index']);
     Route::get('/{id}', [AreaNivelController::class, 'show']);

@@ -7,17 +7,24 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+/**
+ * Controlador para gestionar fases.
+ */
 class FaseController extends Controller
 {
     protected $faseService;
 
+    /**
+     * Constructor de la clase.
+     * @param FaseService $faseService
+     */
     public function __construct(FaseService $faseService)
     {
         $this->faseService = $faseService;
     }
 
     /**
-     * Summary of index
+     * Lista todas las fases
      * @return \Illuminate\Http\JsonResponse
      */
     public function index()
@@ -32,11 +39,12 @@ class FaseController extends Controller
             Log::error('Error al obtener las fases: ' . $e->getMessage());
             return response()->json(['error' => 'Error al obtener las fases'], 500);
         }
-
-
-
-
     }
+    /**
+     * Obtiene una fase por id
+     * @param mixed $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function show($id)
     {
         try {
@@ -49,6 +57,12 @@ class FaseController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Crear una nueva fase
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function store(Request $request)
     {
         try {
@@ -60,7 +74,12 @@ class FaseController extends Controller
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }
-
+    /**
+     * Actualiza una fase
+     * @param Request $request
+     * @param mixed $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function update(Request $request, $id)
     {
         try {
@@ -73,6 +92,11 @@ class FaseController extends Controller
         }
     }
 
+    /**
+     * Elimina una fase
+     * @param mixed $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function destroy($id)
     {
         try {
@@ -82,10 +106,19 @@ class FaseController extends Controller
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }
+    /**
+     * Verifica el estado de una fase por nombre
+     * @param mixed $nombreFase
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function verificarFase($nombreFase)
     {
         return $this->faseService->verificarEstado($nombreFase);
     }
+    /**
+     * Obtiene todas las fases
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function obtenerFases()
     {
 
@@ -100,6 +133,11 @@ class FaseController extends Controller
         }
 
     }
+
+    /**
+     * Publica todas las fases y actividades en estado borrador
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function publicarTodo()
     {
         try {

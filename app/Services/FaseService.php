@@ -19,10 +19,23 @@ class FaseService
         $this->faseRepository = $faseRepository;
     }
 
+
+    /**
+     * Lista fases con paginación y búsqueda opcional
+     * @param mixed $busqueda
+     * @param int $perPage
+     * @return \Illuminate\Pagination\LengthAwarePaginator
+     */
     public function listar(?string $busqueda = null, int $perPage = 10)
     {
         return $this->faseRepository->paginate($busqueda, $perPage);
     }
+
+    /**
+     * Lista todas las fases
+     * @throws \Exception
+     * @return \Illuminate\Database\Eloquent\Collection<int, Fase>
+     */
     public function listarFases()
     {
         $fases = $this->faseRepository->all();
@@ -31,11 +44,20 @@ class FaseService
         }
         return $fases;
     }
+    /**
+     * Obener fases
+     */
     public function obtenerFases()
     {
         return $this->faseRepository->getFases();
     }
 
+    /**
+     * Crear una nueva fase
+     * @param array $data
+     * @throws ValidationException
+     * @return Fase
+     */
     public function crear(array $data): Fase
     {
         $validator = Validator::make($data, [
@@ -59,11 +81,16 @@ class FaseService
     }
 
 
-
+    /**
+     * Actualiza una fase
+     * @param mixed $id
+     * @param array $data
+     * @return array{content: array{data: Fase|null, message: string, state: string, status_code: int}|array{content: array{errors: \Illuminate\Support\MessageBag, state: string}, status_code: int}|array{content: array{message: string, state: string}, status_code: int}}
+     */
     public function actualizarFase($id, array $data)
     {
-        $fase = $this->faseRepository->findById($id);
-        $todasLasFases = $this->obtenerFases();
+        $fase = Fase::find($id);
+        $todasLasFases = Fase::All();
 
         if (!$fase) {
             return [
@@ -79,6 +106,7 @@ class FaseService
 
         // VALIDACIÓN
         $validator = Validator::make($data, [
+            'mode' => 'required|in:create,edit',
             'nombre' => 'sometimes|required|string|max:255',
             'descripcion' => 'nullable|string',
             'estado_publicado' => 'sometimes|required|in:sin_fechas,borrador,publicado',
@@ -92,6 +120,7 @@ class FaseService
             'hora_fin_fin' => 'sometimes|nullable|date_format:H:i|after_or_equal:hora_inicio_fin',
         ]);
 
+
         if ($validator->fails()) {
             return [
                 'status_code' => 422,
@@ -104,6 +133,19 @@ class FaseService
 
         $validated = $validator->validated();
         Log::debug('validated', $validated);
+
+        $mode = $validated['mode'];
+        if ($mode === "create") {
+            if ($fase->estado_publicado === "borrador" || $fase->estado_publicado === "publicado") {
+                return [
+                    'status_code' => 400,
+                    'content' => [
+                        'state' => 'error',
+                        'message' => 'Esta fase ya está registrada en el cronograma.'
+                    ]
+                ];
+            }
+        }
 
         // *************** ARMAR RANGOS DE TIEMPO ***************
         $armarFechaHora = function ($fecha, $hora) {
@@ -127,7 +169,7 @@ class FaseService
                 'status_code' => 400,
                 'content' => [
                     'state' => 'error',
-                    'message' => 'La fase no puede terminar antes de comenzar.'
+                    'message' => 'La fase no puede terminar antes de la fecha y hora en que inicia.'
                 ]
             ];
         }
@@ -145,7 +187,7 @@ class FaseService
                 'status_code' => 400,
                 'content' => [
                     'state' => 'error',
-                    'message' => "La fase '{$fase->nombre}' no tiene un orden definido."
+                    'message' => "La fase '{$fase->nombre}' no tiene un orden definido en el sistema."
                 ]
             ];
         }
@@ -158,19 +200,21 @@ class FaseService
                 $nombreOtra = strtolower($otraFase->nombre);
                 if (!isset($orden[$nombreOtra]))
                     continue;
-
+                Log::debug("orden de la comparacion", [$orden[$nombreActual], $orden[$nombreOtra]]);
+                Log::debug("otra fase", [$otraFase]);
                 if (!$otraFase->fecha_inicio || !$otraFase->hora_inicio_ini || !$otraFase->fecha_fin || !$otraFase->hora_fin_fin)
                     continue;
 
                 $inicioOtra = $armarFechaHora($otraFase->fecha_inicio, $otraFase->hora_inicio_ini);
                 $finOtra = $armarFechaHora($otraFase->fecha_fin, $otraFase->hora_fin_fin);
+                Log::debug("comparacion", [$inicioOtra, $finOtra, $inicioSim, $finSim]);
 
                 if ($orden[$nombreOtra] < $orden[$nombreActual] && $inicioSim->lt($finOtra)) {
                     return [
                         'status_code' => 400,
                         'content' => [
                             'state' => 'error',
-                            'message' => "La fase '{$fase->nombre}' choca con la fase anterior '{$otraFase->nombre}'."
+                            'message' => "La fase '{$fase->nombre}' empieza antes de que finalice la fase anterior '{$otraFase->nombre}'."
                         ]
                     ];
                 }
@@ -180,7 +224,7 @@ class FaseService
                         'status_code' => 400,
                         'content' => [
                             'state' => 'error',
-                            'message' => "La fase '{$fase->nombre}' choca con la fase siguiente '{$otraFase->nombre}'."
+                            'message' => "La fase '{$fase->nombre}' termina después de que inicia la siguiente fase '{$otraFase->nombre}'."
                         ]
                     ];
                 }
@@ -202,12 +246,22 @@ class FaseService
 
 
 
-
+    /**
+     * Obtener una fase por id
+     * @param mixed $id
+     * @return Fase|null
+     */
     public function obtenerFase($id)
     {
         return $this->faseRepository->findById($id);
     }
 
+    /**
+     * Eliminar una fase
+     * @param int $id
+     * @throws \Exception
+     * @return bool
+     */
     public function eliminar(int $id): bool
     {
         $fase = $this->faseRepository->findById($id);
@@ -218,7 +272,11 @@ class FaseService
         return $this->faseRepository->delete($fase);
     }
 
-
+    /**
+     * Verifica el estado de una fase por nombre
+     * @param mixed $nombreFase
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function verificarEstado($nombreFase)
     {
         $fase = $this->faseRepository->findNombre($nombreFase);

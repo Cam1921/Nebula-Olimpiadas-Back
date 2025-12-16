@@ -4,11 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exports\EvaluacionesExport;
 use App\Exports\ListaResultadosExport;
-use App\Models\AreaNivelFase;
-use App\Models\Equipo;
-use App\Models\Evaluacion;
 use App\Models\Fase;
-use App\Repositories\EvaluacionRepository;
 use App\Services\EvaluacionesService;
 use App\Traits\ApiResponseTrait;
 use Barryvdh\DomPDF\Facade\Pdf;

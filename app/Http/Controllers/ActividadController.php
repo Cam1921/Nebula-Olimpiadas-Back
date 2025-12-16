@@ -7,14 +7,14 @@ use App\Services\ActividadService;
 use Illuminate\Http\Request;
 
 /**
- * Summary of ActividadController
+ * Controlador para gestionar actividades.
  */
 class ActividadController extends Controller
 {
     protected $actividadService;
     protected $faseRepository;
     /**
-     * Summary of __construct
+     *  Constructor de la clase.
      * @param ActividadService $actividadService
      */
     public function __construct(ActividadService $actividadService, FaseRepository $faseRepository)
@@ -45,7 +45,7 @@ class ActividadController extends Controller
     }
 
     /**
-     * Summary of show
+     * obtiene una actividad por id
      * @param mixed $id
      * @return \Illuminate\Http\JsonResponse
      */
@@ -56,7 +56,7 @@ class ActividadController extends Controller
     }
 
     /**
-     * Summary of update
+     * Actualiza una actividad
      * @param Request $request
      * @param mixed $id
      * @return \Illuminate\Http\JsonResponse
@@ -69,7 +69,7 @@ class ActividadController extends Controller
     }
 
     /**
-     * Summary of destroy
+     * Elimina una actividad
      * @param mixed $id
      * @return void
      */
@@ -79,7 +79,7 @@ class ActividadController extends Controller
     }
 
     /**
-     * Summary of verificarActividad
+     * Verifica si una actividad existe por nombre y fase
      * @param mixed $nombreFase
      * @param mixed $nombreActividad
      * @return \Illuminate\Http\JsonResponse
@@ -91,7 +91,7 @@ class ActividadController extends Controller
     }
 
     /**
-     * Summary of porFase
+     *  Obtiene las actividades por fase
      * @param mixed $faseId
      * @return \Illuminate\Http\JsonResponse
      */

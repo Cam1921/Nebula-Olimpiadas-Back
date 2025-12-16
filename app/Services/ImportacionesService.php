@@ -16,8 +16,12 @@ use App\Repositories\AreaNivelRepository;
 use App\Repositories\InscripcionRepository;
 use App\Repositories\ListaInscripcionRepository;
 use App\Repositories\OlimpiadaRepository;
+use Illuminate\Support\Facades\Log;
 use Str;
 
+/**
+ * Servicio para la importación de competidores desde archivos CSV.
+ */
 class ImportacionesService
 {
     use NormalizeStringTrait, ApiResponseTrait;
@@ -35,6 +39,20 @@ class ImportacionesService
 
     protected $equipoRepo;
 
+    /**
+     * Constructor de la clase.
+     * @param TutorRepository $tutorRepo
+     * @param InstitucionRepository $institucionRepo
+     * @param CompetidorRepository $competidorRepo
+     * @param AreaRepository $areaRepo
+     * @param NivelRepository $nivelRepo
+     * @param GradoRepository $gradoRepo
+     * @param AreaNivelRepository $areaNivelRepo
+     * @param InscripcionRepository $inscripcionRepo
+     * @param ListaInscripcionRepository $listaInscripcionRepo
+     * @param OlimpiadaRepository $olimpiadaRepo
+     * @param EquipoRepository $equipoRepo
+     */
     public function __construct(
         TutorRepository $tutorRepo,
         InstitucionRepository $institucionRepo,
@@ -61,8 +79,12 @@ class ImportacionesService
         $this->equipoRepo = $equipoRepo;
     }
 
+
+
     /**
-     * PREVIEW: Validar CSV y almacenar temporalmente en Redis
+     * Previsualiza un archivo CSV de competidores.
+     * @param mixed $file
+     * @return array|array{code: int, data: array, errors: array, message: string, meta: array{import_id: string, invalid_rows: int, total_rows: int, valid_rows: int, status: string, warnings: array}}
      */
     public function previewCsv($file)
     {
@@ -78,7 +100,15 @@ class ImportacionesService
         set_time_limit(300); // Aumenta el tiempo máximo temporalmente
 
         $handle = fopen($file, 'r');
-        $headers = fgetcsv($handle, 1000, ',');
+        $firstLine = fgets($handle);
+        $delimiter = substr_count($firstLine, ';') > substr_count($firstLine, ',')
+            ? ';'
+            : ',';
+
+        // Volver al inicio del archivo
+        rewind($handle);
+        $headers = fgetcsv($handle, 1000, $delimiter);
+        Log::debug("esto es el separador", $headers);
         $headers = array_map(fn($h) => $this->normalizeString($h), $headers);
 
         $required = ['nombre completo', 'ci', 'contacto tutor legal', 'unidad educativa', 'departamento', 'grado', 'area', 'nivel'];
@@ -131,7 +161,7 @@ class ImportacionesService
         $import_id = (string) Str::uuid();
         $batchInsert = [];
 
-        while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+        while (($data = fgetcsv($handle, 1000, $delimiter)) !== false) {
             $filaIndex++;
             $fila = [];
             foreach ($headers as $i => $colName) {
@@ -248,9 +278,10 @@ class ImportacionesService
         ];
     }
 
-
     /**
      * Obtener errores por import_id
+     * @param string $import_id
+     * @return array
      */
     public function getErroresCsv(string $import_id)
     {
@@ -271,6 +302,8 @@ class ImportacionesService
 
     /**
      * Confirmar importación
+     * @param string $import_id
+     * @return array
      */
     public function confirmarCsvImportId(string $import_id)
     {
@@ -392,11 +425,11 @@ class ImportacionesService
                         'grado' => $f['grado'],
                         'area' => $f['area'],
                         'nivel' => $f['nivel'],
-                        'unidad educativa' => $f['unidad educativa'],
+                        'unidad_educativa' => $f['unidad educativa'],
                         'departamento' => $f['departamento'],
-                        'contacto tutor legal' => $f['contacto tutor legal'],
-                        'contacto tutor academico' => $f['contacto tutor academico'] ?? null,
-                        'nombre equipo' => $f['nombre equipo'] ?? null
+                        'contacto_tutor_legal' => $f['contacto tutor legal'],
+                        'contacto_tutor_academico' => $f['contacto tutor academico'] ?? null,
+                        'nombre_equipo' => $f['nombre equipo'] ?? null
                     ];
 
                     $totalImportados++;

@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Repositories\InvitacionRepository;
 use DB;
 use Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ResponsableService
@@ -27,6 +28,11 @@ class ResponsableService
         $this->personaService = $personaService;
         $this->invitacionRepo = $invitacionRepo;
     }
+
+    /**
+     * Obtener todos los responsables academicos
+     * @return array{content: array, status_code: int|array{content: array{message: string, status: string}, status_code: int}}
+     */
     public function getResponsablesAcademicos()
     {
         try {
@@ -71,6 +77,10 @@ class ResponsableService
 
 
     }
+    /**
+     * Información de áreas
+     * @return array{areas: \Illuminate\Database\Eloquent\Collection<int, array>|\Illuminate\Support\Collection<int, array>, areasCubiertas: int, areasDisponibles: int, totalResponsables: int}
+     */
     private function informacionAreas()
     {
         $areas = Area::all();
@@ -94,12 +104,16 @@ class ResponsableService
         ];
     }
 
-
+    /**
+     * Crear un nuevo responsable academico
+     * @param mixed $validated
+     * @throws \Exception
+     * @return array{content: array{message: string, status: string, status_code: int}}
+     */
     public function crearResponsableAcademico($validated)
     {
-        return DB::transaction(function () use ($validated) {
-            try {
-
+        try {
+            DB::transaction(function () use ($validated) {
                 $rolResponsable = Rol::where('nombre', 'responsable')->firstOrFail();
                 $user = User::create([
                     'name' => "{$validated['nombre']} {$validated['apellidos']}",
@@ -115,40 +129,17 @@ class ResponsableService
                     'id_usuario' => $user->id,
                 ]);
                 $persona->rols()->attach($rolResponsable->id);
-                $area = Area::find($validated['id_area']);
-
-                if (!$area) {
-                    return [
-                        'status_code' => 422,
-                        'content' => [
-                            'status' => 'error',
-                            'message' => ' Área no encontrada.',
-                        ]
-                    ];
-                }
-
-                $areaNiveles = AreaNivel::where('id_area', $validated['id_area'])->get();
+                $area = Area::findOrFail($validated['id_area']);
+                $areaNiveles = AreaNivel::where('id_area', $area->id)->get();
 
                 if ($areaNiveles->isEmpty()) {
-                    return [
-                        'status_code' => 422,
-                        'content' => [
-                            'status' => 'error',
-                            'message' => ' No se encontraron niveles asociados a esta área.',
-                        ]
-                    ];
+                    throw new \Exception('No se encontraron niveles asociados a esta área.');
                 }
                 $existsPersonaArea = PersonaArea::where('id_area', $validated['id_area'])
                     ->whereHas('persona.rols', fn($q) => $q->where('nombre', 'responsable'))
                     ->exists();
                 if ($existsPersonaArea) {
-                    return [
-                        'status_code' => 422,
-                        'content' => [
-                            'status' => 'error',
-                            'message' => ' Ya existe un Responsable asignado a esta área.',
-                        ]
-                    ];
+                    throw new \Exception('Ya existe un Responsable asignado a esta área.');
                 }
                 PersonaArea::create([
                     'id_persona' => $persona->id,
@@ -162,19 +153,7 @@ class ResponsableService
 
 
                     if ($exists) {
-                        return [
-                            'status_code' => 422,
-                            'content' => [
-                                'status' => 'error',
-                                'message' => 'Error: Ya existe un Responsable asignado a esta área',
-                                'errors' => [
-                                    'asignaciones' => [
-                                        "Área {$areaNivel->id_area}  ya tienen un Responsable asignado."
-                                    ]
-                                ]
-                            ]
-                        ];
-
+                        throw new \Exception('Ya existe un Responsable asignado en uno de los niveles del área.');
                     }
 
                     Asignacion::create([
@@ -183,35 +162,58 @@ class ResponsableService
                     ]);
                 }
 
-                $resCorreo = $this->personaService->enviarCorreoCreacionPassword($persona->id);
+                $this->personaService->enviarCorreoCreacionPassword($persona->id);
 
                 $persona->load(['user', 'asignacions.area_nivel.area', 'asignacions.area_nivel.nivel']);
+            });
+            return [
+                'status_code' => 201,
+                'content' => [
+                    'status' => 'success',
+                    'message' => 'Responsable académico registrado correctamente.',
+                ]
+            ];
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return [
+                'status_code' => 404,
+                'content' => [
+                    'status' => 'error',
+                    'message' => 'Área o rol no encontrado.',
+                ]
+            ];
 
-                return [
-                    'status_code' => 201,
-                    'content' => [
-                        'status' => 'success',
-                        'message' => 'reponsable registrado correctamente.',
-                    ]
-                ];
+        } catch (\Throwable $e) {
+            return [
+                'status_code' => 500,
+                'content' => [
+                    'status' => 'error',
+                    'message' => $e->getMessage(),
+                ]
+            ];
+        }
 
-            } catch (\Exception $e) {
-                return [
-                    'status_code' => 500,
-                    'content' => [
-                        'status' => 'error',
-                        'message' => 'Error interno al registrar evaluador. ',
-                    ]
-                ];
-            }
-        });
     }
-
+    /**
+     * Actualizar un responsable academico
+     * @param mixed $id
+     * @param mixed $request
+     * @throws \Exception
+     * @return array{content: array, status_code: int|array{content: array{message: string, status: string}, status_code: int}}
+     */
     public function actualizarResponsableAcademico($id, $request)
     {
-        $persona = Persona::with('user', 'rols')->findOrFail($id);
-
         try {
+            $persona = Persona::with('user', 'rols')->find($id);
+            if (!$persona) {
+                return [
+                    'status_code' => 422,
+                    'content' => [
+                        'status' => 'error',
+                        'message' => 'Persona no encontrada',
+                    ],
+                ];
+            }
+            Log::debug("datos a actualizar: " . json_encode($request->all()));
             $request->validate([
                 'nombre' => 'sometimes|string|min:2',
                 'apellidos' => 'sometimes|string|min:2',
@@ -234,19 +236,8 @@ class ResponsableService
                 'id_area.integer' => 'El ID del área debe ser un número entero.',
                 'id_area.exists' => 'El área seleccionada no existe.',
             ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return [
-                'status_code' => 422,
-                'content' => [
-                    'message' => 'Error de validación',
-                    'errors' => $e->errors(),
-                ]
-            ];
-        }
 
-        try {
-
-            return DB::transaction(function () use ($request, $persona) {
+            DB::transaction(function () use ($request, $persona) {
                 $oldEmail = $persona->email;
                 $data = $request->only(['nombre', 'apellidos', 'ci', 'telefono', 'email']);
                 if (!empty($data)) {
@@ -277,48 +268,24 @@ class ResponsableService
                     $persona->asignacions()->delete();
                     $persona->persona_areas()->delete();
 
-                    $area = $request->only(['id_area']);
-                    $Areaexists = Area::find($area['id_area']);
+                    $area = Area::findOrFail($request->id_area);
 
-                    if (!$Areaexists) {
-                        return [
-                            'status_code' => 422,
-                            'content' => [
-                                'status' => 'error',
-                                'message' => 'La área no existe.',
-                            ]
-                        ];
-                    }
-
-                    $existsPersonaArea = PersonaArea::where('id_area', $area['id_area'])
+                    $existsPersonaArea = PersonaArea::where('id_area', $area->id)
                         ->whereHas('persona.rols', fn($q) => $q->where('nombre', 'responsable'))
                         ->exists();
 
                     if ($existsPersonaArea) {
-                        return [
-                            'status_code' => 422,
-                            'content' => [
-                                'status' => 'error',
-                                'message' => ' Ya existe un Responsable asignado a esta área.',
-                            ]
-                        ];
+                        throw new \Exception('Ya existe un Responsable asignado a esta área.');
                     }
                     PersonaArea::create([
                         'id_persona' => $persona->id,
-                        'id_area' => $area['id_area'],
+                        'id_area' => $area->id,
                     ]);
 
-                    $areaNiveles = AreaNivel::where('id_area', $area['id_area'])->get();
+                    $areaNiveles = AreaNivel::where('id_area', $area->id)->get();
 
                     if ($areaNiveles->isEmpty()) {
-                        return [
-                            'status_code' => 422,
-                            'content' => [
-                                'message' => 'Error: No se encontraron niveles asociados a esta área.',
-                                'errors' => 'Área no tiene niveles asociados.'
-                            ]
-
-                        ];
+                        throw new \Exception('No se encontraron niveles asociados a esta área.');
                     }
 
                     foreach ($areaNiveles as $areaNivel) {
@@ -328,18 +295,7 @@ class ResponsableService
                             ->exists();
 
                         if ($exists) {
-                            return [
-                                'status_code' => 422,
-                                'content' => [
-                                    'status' => 'error',
-                                    'message' => 'Error: Ya existe un Responsable asignado a esta área',
-                                    'errors' => [
-                                        'asignaciones' => [
-                                            "Área {$areaNivel->id_area} ya tiene un Responsable asignado."
-                                        ]
-                                    ]
-                                ]
-                            ];
+                            throw new \Exception("Ya existe un Responsable asignado en el nivel {$areaNivel->id}.");
                         }
                         Asignacion::create([
                             'id_persona' => $persona->id,
@@ -352,48 +308,65 @@ class ResponsableService
                 // Recargar relaciones
                 $persona->load(['user', 'asignacions.area_nivel.area', 'asignacions.area_nivel.nivel', 'persona_areas.area']);
 
-                return [
-                    'status_code' => 200,
-                    'content' => [
-                        'status' => 'success',
-                        'message' => 'Responsable actualizado correctamente.',
 
-                    ],
-
-                ];
             });
-
-        } catch (\Exception $e) {
             return [
-                'status_code' => 500,
+                'status_code' => 200,
                 'content' => [
-                    'status' => 'error',
-                    'message' => 'Error interno al registrar responsable.',
-                ]
+                    'status' => 'success',
+                    'message' => 'Responsable actualizado correctamente.',
+
+                ],
+
             ];
-        }
-    }
-    public function eliminarResponsableAcademico($id)
-    {
-        $exist = Persona::find($id);
-        if (!$exist) {
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return [
                 'status_code' => 404,
                 'content' => [
                     'status' => 'error',
-                    'message' => 'Responsable no encontrado.',
-                ]
+                    'message' => 'Área o persona no encontrada.',
+                ],
+            ];
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return [
+                'status_code' => 422,
+                'content' => [
+                    'status' => 'error',
+                    'message' => 'Error de validación.',
+                    'errors' => $e->errors(),
+                ],
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'status_code' => 500,
+                'content' => [
+                    'status' => 'error',
+                    'message' => 'Error al actualizar responsable: ' . $e->getMessage(),
+                ],
             ];
         }
-        $persona = Persona::with('user', 'asignacions')->findOrFail($id);
+    }
 
-        return DB::transaction(function () use ($persona) {
-            $persona->asignacions()->delete();
-            $persona->persona_areas()->delete();
-            $persona->user()->delete();
-            $persona->delete();
-            $invitacion = $this->invitacionRepo->findByEmail($persona->email);
-            $this->invitacionRepo->delete($invitacion);
+    /**
+     * Eliminar un responsable academico
+     * @param mixed $id
+     * @return array{content: array{message: string, status: string, status_code: int}}
+     */
+    public function eliminarResponsableAcademico($id)
+    {
+        try {
+
+            $persona = Persona::with('user', 'asignacions')->findOrFail($id);
+
+            DB::transaction(function () use ($persona) {
+                $persona->asignacions()->delete();
+                $persona->persona_areas()->delete();
+                $persona->user()->delete();
+                $persona->delete();
+                $invitacion = $this->invitacionRepo->findByEmail($persona->email);
+                $this->invitacionRepo->delete($invitacion);
+
+            });
             return [
                 'status_code' => 200,
                 'content' => [
@@ -402,6 +375,72 @@ class ResponsableService
                 ],
 
             ];
-        });
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return [
+                'status_code' => 404,
+                'content' => [
+                    'status' => 'error',
+                    'message' => 'Responsable no encontrado.',
+                ],
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status_code' => 500,
+                'content' => [
+                    'status' => 'error',
+                    'message' => 'Error al eliminar el responsable: ' . $e->getMessage(),
+                ],
+            ];
+        }
+
+    }
+
+    /**
+     * chequear existencia de un campo unico
+     * @param mixed $request
+     * @return array{content: array{exists: mixed, message: string, status: string, status_code: int}|array{content: array{message: string, status: string}, status_code: int}}
+     */
+    public function checkResponsable($request)
+    {
+        try {
+            $field = $request->query('field');
+            $value = $request->query('value');
+            $excludeId = $request->query('excludeId'); // ← Nueva línea
+
+            if (!in_array($field, ['ci', 'telefono', 'email'])) {
+                return [
+                    'status_code' => 400,
+                    'content' => [
+                        'status' => 'error',
+                        'message' => 'Campo no permitido',
+                    ],
+                ];
+            }
+
+            $exists = match ($field) {
+                'email' => User::where('email', $value)->exists(),
+                'ci', 'telefono' => Persona::where($field, $value)->exists(),
+            };
+
+            return [
+                'status_code' => 200,
+                'content' => [
+
+                    'status' => 'success',
+                    'exists' => $exists,
+                    'message' => 'Campo verificado correctamente.',
+                ],
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status_code' => 500,
+                'content' => [
+                    'status' => 'error',
+                    'message' => 'Error al verificar el responsable: ' . $e->getMessage(),
+                ],
+            ];
+
+        }
+
     }
 }

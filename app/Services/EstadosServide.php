@@ -145,15 +145,17 @@ class EstadosServide
 
             }
             // Obtener las evaluaciones recién insertadas
-            $evaluacionesNuevas = DB::table('evaluacion')
-                ->where('id_fase', $faseFinal->id)
-                ->whereHas('inscripcion', function ($q) use ($areaNivel) {
-                    $q->where('id_area_nivel', $areaNivel->id);
-                })
+            $evaluacionesNuevas = DB::table('evaluacion as e')
+                ->join('inscripcion as i', 'e.id_inscripcion', '=', 'i.id')
+                ->where('e.id_fase', $faseFinal->id)
+                ->where('i.id_area_nivel', $areaNivel->id)
+                ->select('e.*')
                 ->get();
-            $admin = DB::table('persona_rol')->whereHas('rol', function ($q) {
-                $q->where('nombre', 'administrador');
-            });
+            $admin = DB::table('persona_rol as pr')
+                ->join('rol as r', 'pr.id_rol', '=', 'r.id')
+                ->where('r.nombre', 'administrador')
+                ->select('pr.*')
+                ->first();
             $idPersona = $admin->id_persona ?? null;
             foreach ($evaluacionesNuevas as $evaluacion) {
                 DB::table('evaluacion_auditoria')->insert([
@@ -205,7 +207,7 @@ class EstadosServide
             return;
         }
 
-        // ⚠️ PREVENIR MIGRACIONES DUPLICADAS
+        // PREVENIR MIGRACIONES DUPLICADAS
         $yaExisteRanking = Ranking::where('id_fase', $faseActiva->id)
             ->whereHas('inscripcion.area_nivel.area_nivel_fase', function ($q) use ($idAreaNivelFase) {
                 $q->where('id', $idAreaNivelFase);
@@ -213,7 +215,7 @@ class EstadosServide
             ->exists();
 
         if ($yaExisteRanking) {
-            \Log::debug("⛔ Ranking YA MIGRADO para areaNivelFase $idAreaNivelFase");
+            Log::debug("Ranking YA MIGRADO para areaNivelFase $idAreaNivelFase");
             return;
         }
 
@@ -230,7 +232,6 @@ class EstadosServide
         if ($evaluaciones->isEmpty()) {
             return;
         }
-
         // asignación de posiciones…
         $posicionReal = 1;
         $notaAnterior = null;
@@ -240,7 +241,6 @@ class EstadosServide
             if ($notaAnterior !== null && $evaluacion->nota < $notaAnterior) {
                 $posicionReal++;
             }
-
             // reglas de clasificación
             $estado_clasificado = null;
 
@@ -251,7 +251,6 @@ class EstadosServide
             } else {
                 $estado_clasificado = "Descalificado";
             }
-
             Ranking::create([
                 'id_fase' => $faseActiva->id,
                 'id_inscripcion' => $evaluacion->id_inscripcion,
@@ -264,13 +263,8 @@ class EstadosServide
 
             $notaAnterior = $evaluacion->nota;
         }
-
         return true;
     }
-
-
-
-
 
     public function publicarResultadosTodas($id)
     {

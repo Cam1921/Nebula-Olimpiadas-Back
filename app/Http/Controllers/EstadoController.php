@@ -214,7 +214,7 @@ class EstadoController extends Controller
 
             $faseIniInicio = $armarFechaHora($fase->fecha_inicio, $fase->hora_inicio_ini);
             $faseFinFin = $armarFechaHora($fase->fecha_fin, $fase->hora_fin_fin);
-            if (!$faseIniInicio || !$faseFinFin || $fase->estado === 'cerrada' || $fase->estado_publicado === 'borrador') {
+            if (!$faseIniInicio || !$faseFinFin || $fase->estado === 'cerrada' || $fase->estado_publicado === 'borrador' || $fase->estado_publicado === 'sin_fechas') {
                 continue;
             }
 
@@ -339,8 +339,11 @@ class EstadoController extends Controller
                     });
                     if (!$todoConfirmado) {
                         $areaNivelFases->each(function ($item) {
-                            $item->estado = 'En_revicion';
-                            $item->save();
+                            if ($item->estado != 'confirmado') {
+                                $item->estado = 'En_revicion';
+                                $item->save();
+                            }
+
                         });
                         Evaluacion::where('id_fase', $faseActiva->id)
                             ->update([
